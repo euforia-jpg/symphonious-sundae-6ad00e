@@ -135,7 +135,7 @@
         '</div>' +
       '</div>' +
       (function () {
-        var more = M.P.filter(function (x) { return x.brand === b.id && x.id !== p.id; });
+        var more = M.PV().filter(function (x) { return x.brand === b.id && x.id !== p.id; });
         if (!more.length) return '';
         return '<section class="sec"><div class="sec-h"><div><h2>' + t('pd.more') + '</h2>' +
           '<div class="sub">' + M.esc(b.name) + '</div></div></div>' +

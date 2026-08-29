@@ -35,7 +35,7 @@
     var main = document.getElementById('main');
     if (!b) { main.innerHTML = '<div class="empty"><div class="big">' + t('pd.notfound') + '</div></div>'; return; }
     document.title = b.name + ' — Mercado Euforia';
-    var list = M.P.filter(function (p) { return p.brand === b.id; });
+    var list = M.PV().filter(function (p) { return p.brand === b.id; });
     main.innerHTML =
       '<section class="hero" style="background:linear-gradient(135deg,hsl(' + b.h + ' 58% 46%),hsl(' + b.h + ' 52% 30%))">' +
         '<div class="tag">' + M.esc(b.loc) + ' · ' + t('brand.since') + ' ' + b.since + '</div>' +

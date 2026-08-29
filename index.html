@@ -35,7 +35,7 @@
   var M = window.ME, S = M.S, t = M.t;
   M.boot('index.html', function () {
     var es = S.hall === 'es';
-    var list = M.P.filter(function (p) { return p.hall === S.hall; });
+    var list = M.PV().filter(function (p) { return p.hall === S.hall; });
     var picks = list.filter(function (p) { return p.badge; }).slice(0, 8);
     var brands = M.B.filter(function (b) { return b.hall === S.hall; });
 

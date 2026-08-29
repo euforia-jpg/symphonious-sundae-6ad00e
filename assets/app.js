@@ -108,6 +108,8 @@ function flag(code) {
     FLAGS[code] + '<rect width="24" height="16" fill="none" stroke="rgba(0,0,0,.18)" stroke-width="1"/></svg>';
 }
 
+/* 손님에게 보이는 상품만. 관리자 대쉬보드에서 "숨기기" 한 상품은 목록에서 빠집니다. */
+function PV() { return P.filter(function (p) { return !p.hidden; }); }
 function prod(id) { for (var i = 0; i < P.length; i++) if (String(P[i].id) === String(id)) return P[i]; return null; }
 function brand(id) { for (var i = 0; i < B.length; i++) if (B[i].id === id) return B[i]; return null; }
 function nm(p) { return p.name[S.lang] || p.name.en; }
@@ -347,7 +349,7 @@ function boot(page, render) {
 
 /* ---------- 밖으로 ---------- */
 window.ME = {
-  S: S, t: t, P: P, B: B, CATS: CATS, HUE: HUE, ICON: ICON, MARK: MARK,
+  S: S, t: t, P: P, PV: PV, B: B, CATS: CATS, HUE: HUE, ICON: ICON, MARK: MARK,
   prod: prod, brand: brand, nm: nm, tg: tg, esc: esc, link: link,
   fmt: fmt, fmtAlt: fmtAlt, fmtN: fmtN, unit: unit, fxLine: fxLine, toKRW: toKRW,
   pcard: pcard, bcard: bcard, pimgHTML: pimgHTML, photos: photos, tileFallback: tileFallback,

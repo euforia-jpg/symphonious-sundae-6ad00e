@@ -45,7 +45,7 @@
   }
 
   function draw() {
-    var all = M.P.filter(function (p) { return p.hall === S.hall; });
+    var all = M.PV().filter(function (p) { return p.hall === S.hall; });
     var b = BANDS[st.band];
     var list = all.filter(function (p) {
       return (st.cat === 'all' || p.cat === st.cat) && p.eur >= b[0] && p.eur < b[1];

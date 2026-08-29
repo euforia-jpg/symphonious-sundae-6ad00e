@@ -138,6 +138,24 @@ ul.check .t span{color:var(--muted);font-size:12.5px}
 .lg{text-align:center;font-size:10.5px;font-weight:700;padding:3px 0;border-radius:5px;
   background:color-mix(in srgb,var(--ok) 13%,transparent);color:var(--ok)}
 .lg.miss{background:color-mix(in srgb,var(--bad) 12%,transparent);color:var(--bad)}
+/* ---- 상품 편집 ---- */
+.editbar{position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--panel);
+  border-top:1px solid var(--line);box-shadow:0 -6px 20px rgba(20,22,28,.10)}
+main{padding-bottom:96px}
+details{border-top:1px solid var(--line2);padding-top:10px;margin-top:4px}
+summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--accent-c,var(--cobalt));
+  list-style:none;padding:4px 0}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸ ";display:inline-block;transition:transform .15s}
+details[open] summary::before{content:"▾ "}
+summary:focus-visible{outline:2px solid color-mix(in srgb,var(--cobalt) 50%,transparent);outline-offset:2px}
+.fld.tl.auto > span{color:var(--warn)}
+.fld.tl.auto input,.fld.tl.auto textarea{border-color:color-mix(in srgb,var(--warn) 50%,var(--line));
+  background:color-mix(in srgb,var(--warn) 5%,var(--panel))}
+.autotag{font-size:10.5px;font-weight:700;background:color-mix(in srgb,var(--warn) 16%,transparent);
+  color:var(--warn);padding:1.5px 6px;border-radius:999px;margin-left:5px}
+.panel h3 .pill{vertical-align:2px;margin-left:4px}
+
 /* ---- 사진·영상 ---- */
 .drop{border:2px dashed var(--line);border-radius:13px;padding:26px 18px;text-align:center;cursor:pointer;
   display:grid;gap:5px;justify-items:center;transition:.15s;background:var(--bg)}
@@ -248,17 +266,20 @@ var BASE_P = window.PRODUCTS, BASE_B = window.BRANDS;
 var BASE_FX = { base: window.FX.base, buffer: window.FX.buffer, at: window.FX.at, source: window.FX.source };
 
 /* 저장된 변경분 */
-var D = LS.get(KEY, null) || { p: {}, add: [], fx: null, ts: null };
+var D = LS.get(KEY, null) || { p: {}, add: [], del: {}, auto: {}, fx: null, ts: null };
 if (!D.p) D.p = {}; if (!D.add) D.add = [];
+if (!D.del) D.del = {}; if (!D.auto) D.auto = {};
 
-/* 변경분을 얹은 "지금 화면에 보이는" 상품 목록 */
+/* 변경분을 얹은 "지금 화면에 보이는" 상품 목록. 지운 상품은 빠집니다. */
 function merged() {
-  var out = BASE_P.map(function (p) {
+  var out = [];
+  BASE_P.forEach(function (p) {
+    if (D.del[p.id]) return;
     var o = D.p[p.id];
-    if (!o) return p;
+    if (!o) { out.push(p); return; }
     var c = {}; for (var k in p) c[k] = p[k];
     for (var k2 in o) c[k2] = o[k2];
-    return c;
+    out.push(c);
   });
   D.add.forEach(function (p) { out.push(p); });
   return out;
@@ -297,7 +318,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function 
 function nm(p) { return p.name && (p.name.ko || p.name.en) || '(이름 없음)'; }
 function krw(eur) { return Math.round(eur * fxNow().rate / 10) * 10; }
 function won(n) { return '₩' + n.toLocaleString('ko-KR'); }
-function dirty() { return Object.keys(D.p).length > 0 || D.add.length > 0 || !!D.fx; }
+function dirty() { return Object.keys(D.p).length > 0 || D.add.length > 0 || Object.keys(D.del).length > 0 || !!D.fx; }
 function save() {
   D.ts = new Date().toISOString().slice(0, 16).replace('T', ' ');
   LS.set(KEY, D); paintBar();
@@ -339,7 +360,6 @@ var TABS = [
   ['home',  '요약'],
   ['prod',  '상품'],
   ['media', '사진·영상'],
-  ['add',   '상품 추가'],
   ['lang',  '번역'],
   ['fx',    '환율'],
   ['order', '주문'],
@@ -356,12 +376,14 @@ function paintTabs() {
 }
 function paintBar() {
   var bar = document.getElementById('savebar');
-  if (!dirty()) { bar.hidden = true; return; }
+  /* 편집 화면에는 그 화면 전용 바가 따로 있습니다. 겹치면 저장을 못 누릅니다. */
+  if (!dirty() || TAB === 'edit') { bar.hidden = true; return; }
   bar.hidden = false;
-  var n = Object.keys(D.p).length, a = D.add.length;
+  var n = Object.keys(D.p).length, a = D.add.length, r = Object.keys(D.del).length;
   var bits = [];
   if (n) bits.push('상품 ' + n + '개 수정');
   if (a) bits.push('새 상품 ' + a + '개');
+  if (r) bits.push('삭제 ' + r + '개');
   if (D.fx) bits.push('환율 변경');
   document.getElementById('saveMsg').innerHTML =
     '<span class="dot"></span><b>' + bits.join(' · ') + '</b> — 지금은 <b>내 브라우저에서만</b> 보입니다. 손님에게 반영하려면 내보내서 배포하세요.';
@@ -449,12 +471,13 @@ function vProd() {
         '<option value="soft"' + (FILT.only === 'soft' ? ' selected' : '') + '>보완할 것만</option>' +
         '<option value="oos"' + (FILT.only === 'oos' ? ' selected' : '') + '>품절만</option></select>' +
       '<span class="sp"></span><span class="pmeta">' + list.length + ' / ' + P.length + '개</span>' +
+      '<button class="btn primary" id="newBtn">+ 새 상품</button>' +
     '</div></div>' +
     '<div class="tblwrap"><table><thead><tr>' +
       '<th style="width:44px">번호</th><th>상품</th><th style="width:74px">관</th>' +
       '<th style="width:108px">가격 €</th><th style="width:96px">원화</th>' +
       '<th style="width:98px">용량</th><th style="width:78px">재고</th>' +
-      '<th style="width:104px">배지</th><th style="width:180px">상태</th><th style="width:56px"></th>' +
+      '<th style="width:104px">배지</th><th style="width:170px">상태</th><th style="width:118px"></th>' +
     '</tr></thead><tbody>' +
     (list.length ? list.map(rowHTML).join('')
       : '<tr><td colspan="10" style="padding:26px;text-align:center;color:var(--muted)">해당하는 상품이 없습니다.</td></tr>') +
@@ -477,10 +500,14 @@ function rowHTML(p) {
         '<option value="new"' + (p.badge === 'new' ? ' selected' : '') + '>NEW</option>' +
         '<option value="best"' + (p.badge === 'best' ? ' selected' : '') + '>BEST</option></select></td>' +
     '<td>' +
+      (p.hidden ? '<span class="pill warn" style="margin:1px 2px 1px 0">숨김</span>' : '') +
       iss.map(function (s) { return '<span class="pill bad" style="margin:1px 2px 1px 0">' + s + '</span>'; }).join('') +
       softs(p).map(function (s) { return '<span class="pill warn" style="margin:1px 2px 1px 0">' + s + '</span>'; }).join('') +
       (iss.length || softs(p).length ? '' : '<span class="pill ok">완료</span>') + '</td>' +
-    '<td><a class="btn sm" href="product.html?id=' + encodeURIComponent(p.id) + '" target="_blank" rel="noopener">보기</a></td>' +
+    '<td><div class="row" style="gap:4px;flex-wrap:nowrap">' +
+      '<button class="btn sm" data-edit="' + esc(p.id) + '">편집</button>' +
+      '<button class="btn sm danger" data-del="' + esc(p.id) + '" title="지우기">✕</button>' +
+    '</div></td>' +
   '</tr>';
 }
 
@@ -698,31 +725,264 @@ function downloadAllMedia() {
   });
 }
 
-/* ---------- 상품 추가 ---------- */
-function vAdd() {
+/* =========================================================================
+   상품 편집 — 새로 넣기 · 고치기 · 숨기기 · 지우기 를 한 화면에서
+   ========================================================================= */
+var ESEL = null;                 // 편집 중인 상품 번호, 'new' 면 새 상품
+var FIELDS = [
+  { k: 'name', label: '상품 이름',   ph: '하엔 엑스트라버진 올리브오일 500ml', big: false },
+  { k: 'tag',  label: '한 줄 소개',  ph: '안달루시아 첫 수확 올리브만 저온 압착', big: false },
+  { k: 'desc', label: '상품 설명',   ph: '무엇인지 · 어떻게 만드는지 · 어떻게 쓰는지. 두세 문장이면 충분합니다.', big: true }
+];
+
+function blank() {
+  return { id: 'new', hall: 'es', cat: 'food', brand: BASE_B[0].id, eur: 0, g: '', stock: 0,
+           badge: 'new', origin: '', dop: '', img: '', imgs: [], name: {}, tag: {}, desc: {} };
+}
+function vEdit() {
+  var isNew = ESEL === 'new';
+  var p = isNew ? blank() : getP(ESEL);
+  if (!p) { go('prod'); return; }
+  var auto = D.auto[p.id] || {};
+  var ph = photosOf(p);
+
   view(
-    '<h2 class="sec">상품 추가</h2><p class="sub">한국어·스페인어·영어만 넣어도 등록됩니다. 나머지 언어는 <b>번역</b> 탭에서 나중에 채우면 됩니다.</p>' +
+    '<div class="row" style="margin-bottom:6px"><button class="btn sm" data-tab="prod">← 상품 목록</button>' +
+      (isNew ? '' : '<a class="btn sm" href="product.html?id=' + encodeURIComponent(p.id) + '" target="_blank" rel="noopener">가게에서 보기 ↗</a>') +
+      (p.hidden ? '<span class="pill warn">지금 숨김 상태입니다</span>' : '') + '</div>' +
+    '<h2 class="sec">' + (isNew ? '새 상품 넣기' : esc(nm(p)) ) + '</h2>' +
+    '<p class="sub">' + (isNew
+      ? '한국어만 채우고 [자동 번역]을 누르면 나머지 6개 언어가 초벌로 채워집니다.'
+      : '번호 ' + esc(p.id) + ' · 고친 내용은 [저장]을 눌러야 반영됩니다.') + '</p>' +
+
     '<div class="panel"><h3>기본</h3><div class="grid2">' +
-      '<label class="fld"><span>관</span><select id="a_hall"><option value="es">Shop Spain (스페인 → 한국)</option><option value="kr">Shop Korea (한국 → 스페인)</option></select></label>' +
-      '<label class="fld"><span>분류</span><select id="a_cat">' + CATS.map(function (c) { return '<option value="' + c + '">' + CATNAME[c] + '</option>'; }).join('') + '</select></label>' +
-      '<label class="fld"><span>브랜드(생산자)</span><select id="a_brand">' + BASE_B.map(function (b) { return '<option value="' + b.id + '">' + esc(b.name) + ' · ' + esc(b.loc) + '</option>'; }).join('') + '</select></label>' +
-      '<label class="fld"><span>가격 (€) — 모르면 비워 두세요</span><input id="a_eur" type="number" step="0.01" min="0" placeholder="24.90"></label>' +
-      '<label class="fld"><span>용량·무게</span><input id="a_g" placeholder="500 ml / 250 g"></label>' +
-      '<label class="fld"><span>재고</span><input id="a_stock" type="number" min="0" value="0"></label>' +
-      '<label class="fld"><span>배지</span><select id="a_badge"><option value="">—</option><option value="new" selected>NEW</option><option value="best">BEST</option></select></label>' +
-      '<label class="fld"><span>원산지 표기</span><input id="a_origin" placeholder="Jaén, ES"></label>' +
-    '</div>' +
-    '<label class="fld"><span>사진 파일 경로 (없으면 비워 두세요)</span><input id="a_img" placeholder="assets/img/파일이름.jpg"></label>' +
-    '</div>' +
-    ['ko', 'es', 'en'].map(function (L) {
-      return '<div class="panel"><h3>' + LANGNAME[L] + ' (' + L + ')</h3>' +
-        '<label class="fld"><span>이름</span><input data-a="name" data-l="' + L + '"></label>' +
-        '<label class="fld"><span>한 줄 소개</span><input data-a="tag" data-l="' + L + '"></label>' +
-        '<label class="fld"><span>상품 설명 (두세 문장)</span><textarea data-a="desc" data-l="' + L + '"></textarea></label></div>';
-    }).join('') +
-    '<div class="row"><button class="btn primary" id="addBtn">상품 추가</button>' +
-    '<span class="pmeta">추가한 상품도 내보내기 전까지는 내 브라우저에서만 보입니다.</span></div>'
+      '<label class="fld"><span>관</span><select id="e_hall">' +
+        '<option value="es"' + (p.hall === 'es' ? ' selected' : '') + '>Shop Spain (스페인 → 한국)</option>' +
+        '<option value="kr"' + (p.hall === 'kr' ? ' selected' : '') + '>Shop Korea (한국 → 스페인)</option></select></label>' +
+      '<label class="fld"><span>분류</span><select id="e_cat">' + CATS.map(function (c) {
+        return '<option value="' + c + '"' + (p.cat === c ? ' selected' : '') + '>' + CATNAME[c] + '</option>'; }).join('') + '</select></label>' +
+      '<label class="fld"><span>브랜드(생산자)</span><select id="e_brand">' + BASE_B.map(function (b) {
+        return '<option value="' + b.id + '"' + (p.brand === b.id ? ' selected' : '') + '>' + esc(b.name) + ' · ' + esc(b.loc) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="fld"><span>가격 (€) — 모르면 비워 두세요</span><input id="e_eur" type="number" step="0.01" min="0" value="' + (p.eur || '') + '" placeholder="24.90"></label>' +
+      '<label class="fld"><span>용량·무게 (단위까지)</span><input id="e_g" value="' + esc(p.g || '') + '" placeholder="500 ml / 250 g"></label>' +
+      '<label class="fld"><span>재고</span><input id="e_stock" type="number" min="0" value="' + (p.stock || 0) + '"></label>' +
+      '<label class="fld"><span>배지</span><select id="e_badge">' +
+        '<option value=""' + (!p.badge ? ' selected' : '') + '>—</option>' +
+        '<option value="new"' + (p.badge === 'new' ? ' selected' : '') + '>NEW</option>' +
+        '<option value="best"' + (p.badge === 'best' ? ' selected' : '') + '>BEST</option></select></label>' +
+      '<label class="fld"><span>원산지 표기</span><input id="e_origin" value="' + esc(p.origin || '') + '" placeholder="Jaén, ES"></label>' +
+      '<label class="fld"><span>원산지 보호 명칭 (없으면 비움)</span><input id="e_dop" value="' + esc(p.dop || '') + '" placeholder="D.O.P. …"></label>' +
+    '</div></div>' +
+
+    FIELDS.map(function (f) { return fieldPanel(f, p, auto); }).join('') +
+
+    '<div class="panel"><h3>사진·영상</h3>' +
+      (ph.length
+        ? '<div class="shots">' + ph.slice(0, 4).map(function (s) {
+            return '<figure class="shot"><img src="' + esc(s) + '" data-mp="' + esc(s) + '" alt="">' +
+              '<figcaption class="mono">' + esc(s.split('/').pop()) + '</figcaption></figure>'; }).join('') + '</div>'
+        : '<p class="hint">아직 사진이 없습니다.</p>') +
+      (p.video ? '<p class="hint" style="margin-top:10px">영상 있음 · ' + esc(p.video.kind) + '</p>' : '') +
+      '<div class="row" style="margin-top:12px"><button class="btn" data-goto="media" data-msel="' + esc(p.id) + '"' +
+        (isNew ? ' disabled title="먼저 저장하세요"' : '') + '>사진·영상 넣으러 가기</button></div></div>' +
+
+    '<div class="panel"><h3>자동 번역이 잘 안 되면</h3>' +
+      '<p class="hint">무료 번역은 하루 쓸 수 있는 양이 정해져 있고, 파는 글로는 어색할 때가 있습니다. ' +
+      '아래 단추를 누르면 <b>클로드에게 보낼 요청문</b>이 복사됩니다. 대화창에 붙여넣기만 하시면 7개 언어를 제대로 써 드립니다.</p>' +
+      '<div class="row"><button class="btn" id="askBtn">클로드에게 번역 맡기기 — 요청문 복사</button></div>' +
+      '<textarea id="askBox" hidden style="margin-top:12px;min-height:120px" readonly></textarea></div>' +
+
+    '<div class="editbar"><div class="wrap savebar-in">' +
+      '<span class="msg">' + (isNew ? '새 상품입니다. 저장하면 목록에 들어갑니다.' : '고친 내용은 저장을 눌러야 남습니다.') + '</span>' +
+      (isNew ? '' :
+        '<button class="btn" id="eHide">' + (p.hidden ? '다시 보이기' : '숨기기') + '</button>' +
+        '<button class="btn danger" id="eDel">지우기</button>') +
+      '<button class="btn" data-tab="prod">취소</button>' +
+      '<button class="btn primary" id="eSave">저장</button>' +
+    '</div></div>'
   );
+}
+function fieldPanel(f, p, auto) {
+  var src = (p[f.k] && p[f.k].ko) || '';
+  var doneN = LANGS.filter(function (L) { return p[f.k] && p[f.k][L]; }).length;
+  var autoN = (auto[f.k] || []).length;
+  var inp = function (L) {
+    var v = (p[f.k] && p[f.k][L]) || '';
+    var isAuto = (auto[f.k] || []).indexOf(L) >= 0;
+    return '<label class="fld tl' + (isAuto ? ' auto' : '') + '"><span>' + LANGNAME[L] +
+      (isAuto ? ' <b class="autotag">자동 · 검수 전</b>' : '') + '</span>' +
+      (f.big ? '<textarea data-e="' + f.k + '" data-l="' + L + '" placeholder="' + esc(f.ph) + '">' + esc(v) + '</textarea>'
+             : '<input data-e="' + f.k + '" data-l="' + L + '" value="' + esc(v) + '" placeholder="' + esc(f.ph) + '">') +
+      '</label>';
+  };
+  return '<div class="panel"><h3>' + f.label +
+      ' <span class="pill ' + (doneN === 7 ? 'ok' : 'warn') + '">' + doneN + ' / 7</span>' +
+      (autoN ? ' <span class="pill warn">자동 ' + autoN + '개 검수 전</span>' : '') + '</h3>' +
+    inp('ko') +
+    '<div class="row" style="margin:2px 0 12px">' +
+      '<button class="btn primary sm" data-tr="' + f.k + '">자동 번역 — 나머지 6개 언어 채우기</button>' +
+      '<button class="btn sm" data-ok="' + f.k + '"' + (autoN ? '' : ' disabled') + '>검수 끝 표시</button>' +
+      '<span class="pmeta" id="trmsg_' + f.k + '"></span></div>' +
+    '<details' + (doneN > 1 ? '' : '') + '><summary>다른 언어 6개 보기 · 고치기</summary>' +
+      '<div class="grid2" style="margin-top:12px">' + ['es', 'en', 'fr', 'de', 'it', 'zh'].map(inp).join('') + '</div>' +
+    '</details></div>';
+}
+
+/* ---------- 자동 번역 ----------
+   MyMemory 무료 번역 API 를 대표님 브라우저에서 직접 부릅니다. 열쇠(키) 가 필요 없습니다.
+   기계 번역이라 초벌입니다 — 상품 설명처럼 파는 글은 반드시 눈으로 한 번 보셔야 합니다. */
+var MM = { max: 480, code: { ko: 'ko-KR', es: 'es-ES', en: 'en-GB', fr: 'fr-FR', de: 'de-DE', it: 'it-IT', zh: 'zh-CN' } };
+function mmOne(text, from, to) {
+  var mail = LS.get('me_admin_mail', '');
+  var u = 'https://api.mymemory.translated.net/get?q=' + encodeURIComponent(text) +
+          '&langpair=' + MM.code[from] + '|' + MM.code[to] + (mail ? '&de=' + encodeURIComponent(mail) : '');
+  return fetch(u, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
+    var out = j && j.responseData && j.responseData.translatedText;
+    if (!out || /MYMEMORY WARNING|QUERY LENGTH|INVALID|QUOTA/i.test(out)) throw new Error(out || '실패');
+    return out;
+  });
+}
+/* 긴 글은 문장 단위로 잘라서 보내고 다시 이어 붙입니다 */
+function mmText(text, from, to) {
+  var parts = [], cur = '';
+  text.split(/(?<=[.。!?])\s*/).forEach(function (s) {
+    if ((cur + ' ' + s).length > MM.max) { if (cur) parts.push(cur); cur = s; }
+    else cur = cur ? cur + ' ' + s : s;
+  });
+  if (cur) parts.push(cur);
+  if (!parts.length) parts = [text];
+  var out = [];
+  return parts.reduce(function (chain, part) {
+    return chain.then(function () {
+      return mmOne(part, from, to).then(function (r) { out.push(r); });
+    });
+  }, Promise.resolve()).then(function () { return out.join(' '); });
+}
+function autoTranslate(key) {
+  var msg = document.getElementById('trmsg_' + key);
+  var srcEl = document.querySelector('[data-e="' + key + '"][data-l="ko"]');
+  var text = (srcEl.value || '').trim();
+  if (!text) { msg.textContent = '한국어 칸을 먼저 채워 주세요.'; return; }
+  var targets = ['es', 'en', 'fr', 'de', 'it', 'zh'].filter(function (L) {
+    var el = document.querySelector('[data-e="' + key + '"][data-l="' + L + '"]');
+    return el && !el.value.trim();      // 이미 쓴 것은 건드리지 않습니다
+  });
+  if (!targets.length) { msg.textContent = '6개 언어가 이미 채워져 있습니다. 지우고 다시 누르면 새로 번역합니다.'; return; }
+
+  var btn = document.querySelector('[data-tr="' + key + '"]');
+  btn.disabled = true;
+  var done = [], failed = [];
+  msg.textContent = '번역하는 중… (0/' + targets.length + ')';
+  targets.reduce(function (chain, L) {
+    return chain.then(function () {
+      return mmText(text, 'ko', L).then(function (r) {
+        var el = document.querySelector('[data-e="' + key + '"][data-l="' + L + '"]');
+        if (el) {
+          el.value = r;
+          /* 다시 그리지 않고 그 자리에서 "자동 · 검수 전" 표시를 붙입니다 */
+          var f = el.closest('.fld');
+          if (f && !f.classList.contains('auto')) {
+            f.classList.add('auto');
+            var sp = f.querySelector('span');
+            if (sp && !sp.querySelector('.autotag')) sp.insertAdjacentHTML('beforeend', ' <b class="autotag">자동 · 검수 전</b>');
+          }
+        }
+        done.push(L);
+        msg.textContent = '번역하는 중… (' + done.length + '/' + targets.length + ')';
+      }).catch(function () { failed.push(L); });
+    });
+  }, Promise.resolve()).then(function () {
+    btn.disabled = false;
+    if (!done.length) {
+      msg.innerHTML = '<b style="color:var(--bad)">번역을 받아오지 못했습니다.</b> 회선이 막혔거나 오늘 무료 한도를 다 썼을 수 있습니다. ' +
+        '아래 [클로드에게 번역 맡기기]를 쓰세요.';
+      return;
+    }
+    var id = ESEL;
+    if (!D.auto[id]) D.auto[id] = {};
+    D.auto[id][key] = (D.auto[id][key] || []).concat(done);
+    save();
+    msg.innerHTML = '<b>' + done.length + '개 언어 채웠습니다.</b> 기계 번역이라 초벌입니다 — 눈으로 한 번 보시고 [검수 끝 표시]를 눌러 주세요.' +
+      (failed.length ? ' (' + failed.join(', ') + ' 실패)' : '');
+    var d = document.querySelector('[data-tr="' + key + '"]').closest('.panel').querySelector('details');
+    if (d) d.open = true;
+  });
+}
+/* 클로드에게 맡기기 — 붙여넣기 좋은 요청문을 만들어 줍니다 */
+function claudeAsk() {
+  var p = ESEL === 'new' ? null : getP(ESEL);
+  var lines = ['아래 상품의 이름 · 한 줄 소개 · 상품 설명을 스페인어, 영어, 프랑스어, 독일어, 이탈리아어, 중국어로 번역해서 대쉬보드에 넣어줘.', ''];
+  FIELDS.forEach(function (f) {
+    var el = document.querySelector('[data-e="' + f.k + '"][data-l="ko"]');
+    lines.push('[' + f.label + '] ' + ((el && el.value.trim()) || '(비어 있음)'));
+  });
+  if (p) lines.push('', '(상품 번호 ' + p.id + ')');
+  var txt = lines.join('\n');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(txt).then(function () { toast('복사했습니다 — 클로드 대화창에 붙여넣으세요'); })
+      .catch(function () { showAsk(txt); });
+  } else showAsk(txt);
+}
+function showAsk(txt) {
+  var box = document.getElementById('askBox');
+  if (box) { box.value = txt; box.hidden = false; box.select(); }
+}
+
+/* 저장 · 숨기기 · 지우기 */
+function readEdit() {
+  function v(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+  var o = { hall: v('e_hall'), cat: v('e_cat'), brand: v('e_brand'),
+            eur: v('e_eur') ? Math.round(parseFloat(v('e_eur')) * 100) / 100 : 0,
+            g: v('e_g'), stock: parseInt(v('e_stock'), 10) || 0,
+            badge: v('e_badge'), origin: v('e_origin'), dop: v('e_dop') };
+  FIELDS.forEach(function (f) { o[f.k] = {}; });
+  document.querySelectorAll('[data-e]').forEach(function (el) {
+    var val = el.value.trim(); if (!val) return;
+    o[el.dataset.e][el.dataset.l] = val;
+  });
+  return o;
+}
+function saveEdit() {
+  var o = readEdit();
+  if (!o.name.ko && !o.name.en && !o.name.es) return toast('상품 이름을 하나 이상 넣어 주세요');
+  if (!o.name.en) o.name.en = o.name.es || o.name.ko;
+  if (o.eur < 0) return toast('가격은 0 이상이어야 합니다');
+
+  if (ESEL === 'new') {
+    var id = 'n' + (Date.now() % 100000);
+    o.id = id; o.img = ''; o.imgs = [];
+    D.add.push(o);
+    /* 저장 전에 번역한 기록을 새 번호로 옮겨 둡니다 */
+    if (D.auto['new']) { D.auto[id] = D.auto['new']; delete D.auto['new']; }
+    save();
+    ESEL = id; toast('새 상품을 넣었습니다');
+    go('edit');
+    return;
+  }
+  var cur = getP(ESEL);
+  Object.keys(o).forEach(function (k) { if (!same(cur[k], o[k])) setP(ESEL, k, o[k]); });
+  toast('저장했습니다');
+  go('prod');
+}
+function hideToggle() {
+  var p = getP(ESEL); if (!p) return;
+  setP(ESEL, 'hidden', p.hidden ? false : true);
+  toast(p.hidden ? '다시 보이게 했습니다' : '손님 화면에서 숨겼습니다');
+  render();
+}
+function delProduct(id, quiet) {
+  var p = getP(id); if (!p) return;
+  if (!quiet && !confirm('"' + nm(p) + '" 을 지웁니다.\n\n사이트에서 완전히 빠집니다. 잠깐 안 팔 것이면 [지우기] 대신 [숨기기]를 쓰세요.\n계속할까요?')) return;
+  photosOf(p).forEach(function (s) { window.MEDIA.del(s); });
+  if (p.video && p.video.kind === 'file') window.MEDIA.del(p.video.src);
+  var ix = -1;
+  D.add.forEach(function (x, i) { if (String(x.id) === String(id)) ix = i; });
+  if (ix >= 0) D.add.splice(ix, 1);
+  else { D.del[id] = true; delete D.p[id]; }
+  delete D.auto[id];
+  MISS = null; save();
+  toast('지웠습니다');
+  go('prod');
 }
 
 /* ---------- 번역 ---------- */
@@ -752,7 +1012,24 @@ function vLang() {
             '<td><a class="btn sm" href="product.html?id=' + encodeURIComponent(p.id) + '&lang=en" target="_blank" rel="noopener">보기</a></td></tr>';
         }).join('') + '</tbody></table></div>'
       : '<div class="panel"><p class="hint" style="margin:0">7개 언어가 모두 채워져 있습니다.</p></div>') +
-    '<div class="note" style="margin-top:16px">번역 문장 자체는 이 화면에서 고치지 않습니다. 문장이 길어 표에서 다루기 나쁘고, 실수로 지우면 되돌리기 어렵기 때문입니다. 빠진 문장은 저에게 <b>어느 상품, 어느 언어</b>인지 알려 주시면 채워 드립니다.</div>'
+    (function () {
+      var pend = Object.keys(D.auto).filter(function (id) {
+        return Object.keys(D.auto[id] || {}).length && getP(id);
+      });
+      if (!pend.length) return '';
+      return '<div class="panel" style="margin-top:16px;border-color:color-mix(in srgb,var(--warn) 45%,var(--line))">' +
+        '<h3 style="color:var(--warn)">자동 번역 검수가 남았습니다 — ' + pend.length + '개 상품</h3>' +
+        '<p class="hint">기계가 번역한 문장입니다. 파는 글이라 한 번은 눈으로 보셔야 합니다.</p><ul class="check">' +
+        pend.map(function (id) {
+          var p = getP(id);
+          return '<li><span class="pill warn">자동</span><span class="t"><b>' + esc(nm(p)) + '</b>' +
+            '<span>' + Object.keys(D.auto[id]).map(function (k) {
+              return ({ name: '이름', tag: '한 줄 소개', desc: '상품 설명' })[k] + ' ' + D.auto[id][k].length + '개어';
+            }).join(' · ') + '</span></span>' +
+            '<button class="btn sm" data-edit="' + esc(id) + '">검수하러 가기</button></li>';
+        }).join('') + '</ul></div>';
+    })() +
+    '<div class="note" style="margin-top:16px">번역 문장은 <b>상품 → [편집]</b> 화면에서 고칩니다. 한국어를 쓰고 [자동 번역]을 누르면 나머지 6개 언어가 초벌로 채워지고, 손보신 뒤 [검수 끝 표시]를 누르시면 됩니다. 제대로 된 번역이 필요하시면 편집 화면의 [클로드에게 번역 맡기기]를 쓰세요.</div>'
   );
 }
 
@@ -819,6 +1096,9 @@ function vDeploy() {
       ? '<div class="panel"><h3>지금 반영을 기다리는 것</h3><ul class="check">' +
         (n ? '<li><span class="pill warn">' + n + '</span><span class="t"><b>고친 상품</b><span>' + Object.keys(D.p).map(function (id) { var p = merged().filter(function (x) { return String(x.id) === String(id); })[0]; return p ? nm(p) : id; }).join(', ') + '</span></span></li>' : '') +
         (a ? '<li><span class="pill warn">' + a + '</span><span class="t"><b>새로 추가한 상품</b><span>' + D.add.map(nm).join(', ') + '</span></span></li>' : '') +
+        (Object.keys(D.del).length ? '<li><span class="pill bad">' + Object.keys(D.del).length + '</span><span class="t"><b>지운 상품</b>' +
+          '<span>' + Object.keys(D.del).map(function (id) { var b0 = baseById(id); return b0 ? (b0.name.ko || b0.name.en) : id; }).join(', ') +
+          ' — 내보낸 data.js 부터 빠집니다</span></span></li>' : '') +
         (D.fx ? '<li><span class="pill warn">1</span><span class="t"><b>환율</b><span>기준환율 ₩' + fxNow().base.toLocaleString('ko-KR') + ' · 적용 ₩' + fxNow().rate.toLocaleString('ko-KR') + '</span></span></li>' : '') +
         '</ul></div>'
       : '<div class="panel"><p class="hint" style="margin:0">반영을 기다리는 변경이 없습니다. data.js 와 지금 화면이 같습니다.</p></div>') +
@@ -846,6 +1126,14 @@ function vSet() {
       '<label class="fld"><span>새 암호</span><input type="password" id="np1"></label>' +
       '<label class="fld"><span>한 번 더</span><input type="password" id="np2"></label></div>' +
       '<button class="btn primary" id="pwSave">바꾸기</button></div>' +
+    '<div class="panel"><h3>자동 번역</h3>' +
+      '<p class="hint">무료 번역(MyMemory)은 익명으로 쓰면 하루 분량이 적습니다. 메일 주소를 넣어 두면 하루 한도가 <b>10배</b>로 늘어납니다. ' +
+      '주소는 번역 요청에만 붙어 나가고 이 브라우저에만 저장됩니다.</p>' +
+      '<label class="fld" style="max-width:340px"><span>메일 주소 (선택)</span>' +
+        '<input type="email" id="trMail" value="' + esc(LS.get('me_admin_mail', '')) + '" placeholder="euforia@euforiatour.com"></label>' +
+      '<div class="row"><button class="btn primary" id="trMailSave">저장</button>' +
+      '<button class="btn" id="trTest">번역 되는지 확인</button><span class="pmeta" id="trTestMsg"></span></div></div>' +
+
     '<div class="panel"><h3>지금 읽고 있는 데이터</h3>' +
       '<ul class="check">' +
       '<li><span class="t"><b>assets/data.js</b><span>상품 ' + BASE_P.length + '개 · 브랜드 ' + BASE_B.length + '개</span></span></li>' +
@@ -861,7 +1149,7 @@ function vSet() {
 /* =========================== 그리기 =========================== */
 function render() {
   paintTabs(); paintBar();
-  ({ home: vHome, prod: vProd, media: vMedia, add: vAdd, lang: vLang, fx: vFx, order: vOrder, deploy: vDeploy, set: vSet }[TAB])();
+  ({ home: vHome, prod: vProd, media: vMedia, edit: vEdit, lang: vLang, fx: vFx, order: vOrder, deploy: vDeploy, set: vSet }[TAB])();
   if (window.MEDIA) window.MEDIA.hydrate(document);
   if (MISS === null && (TAB === 'media' || TAB === 'deploy' || TAB === 'home')) {
     checkFiles(function () { if (TAB === 'media' || TAB === 'deploy' || TAB === 'home') render(); });
@@ -873,17 +1161,18 @@ function go(tab) { TAB = tab; try { history.replaceState(null, '', '#' + tab); }
 /* =========================== 동작 =========================== */
 document.addEventListener('click', function (e) {
   var tb = e.target.closest('[data-tab]'); if (tb) return go(tb.dataset.tab);
-  var gt = e.target.closest('[data-goto]'); if (gt) return go(gt.dataset.goto);
+  var gt = e.target.closest('[data-goto]');
+  if (gt) { if (gt.dataset.msel) MSEL = gt.dataset.msel; return go(gt.dataset.goto); }
 
   if (e.target.id === 'lockBtn') { LS.set('me_admin_open', false); location.reload(); return; }
   if (e.target.id === 'revertBtn' || e.target.id === 'wipeBtn') {
     if (!confirm('이 브라우저에 저장된 수정 내용을 모두 지웁니다. 계속할까요?')) return;
-    D = { p: {}, add: [], fx: null, ts: null }; LS.del(KEY); render(); toast('되돌렸습니다'); return;
+    D = { p: {}, add: [], del: {}, auto: {}, fx: null, ts: null }; LS.del(KEY); render(); toast('되돌렸습니다'); return;
   }
   if (e.target.id === 'exportBtn' || e.target.id === 'dlBtn') { exportData(); return; }
   if (e.target.id === 'clearBtn') {
     if (!confirm('배포한 사이트에서 값이 제대로 보이는지 확인하셨나요? 확인했다면 임시 변경을 지웁니다.')) return;
-    D = { p: {}, add: [], fx: null, ts: null }; LS.del(KEY); render(); toast('정리했습니다'); return;
+    D = { p: {}, add: [], del: {}, auto: {}, fx: null, ts: null }; LS.del(KEY); render(); toast('정리했습니다'); return;
   }
 
   /* 환율 */
@@ -905,8 +1194,23 @@ document.addEventListener('click', function (e) {
   if (e.target.id === 'nfLoad') { loadOrders(); return; }
   if (e.target.id === 'nfClear') { LS.del(TOKKEY); document.getElementById('nfTok').value = ''; toast('토큰을 지웠습니다'); return; }
 
-  /* 상품 추가 */
-  if (e.target.id === 'addBtn') { addProduct(); return; }
+  /* ----- 상품 편집 ----- */
+  var eb = e.target.closest('[data-edit]');
+  if (eb) { ESEL = eb.dataset.edit; go('edit'); return; }
+  if (e.target.id === 'newBtn') { ESEL = 'new'; go('edit'); return; }
+  if (e.target.id === 'eSave') { saveEdit(); return; }
+  if (e.target.id === 'eHide') { hideToggle(); return; }
+  if (e.target.id === 'eDel') { delProduct(ESEL); return; }
+  var db = e.target.closest('[data-del]');
+  if (db) { delProduct(db.dataset.del); return; }
+  var tb2 = e.target.closest('[data-tr]');
+  if (tb2) { autoTranslate(tb2.dataset.tr); return; }
+  var ok = e.target.closest('[data-ok]');
+  if (ok) {
+    if (D.auto[ESEL]) { delete D.auto[ESEL][ok.dataset.ok]; save(); }
+    render(); toast('검수 끝으로 표시했습니다'); return;
+  }
+  if (e.target.id === 'askBtn') { claudeAsk(); return; }
 
   /* ----- 사진·영상 ----- */
   if (e.target.closest('#mDrop')) { document.getElementById('mFile').click(); return; }
@@ -951,6 +1255,21 @@ document.addEventListener('click', function (e) {
     var p2 = getP(MSEL); if (!p2) return;
     if (p2.video && p2.video.kind === 'file') window.MEDIA.del(p2.video.src);
     setP(p2.id, 'video', null); render(); toast('영상을 뺐습니다');
+    return;
+  }
+
+  /* 자동 번역 설정 */
+  if (e.target.id === 'trMailSave') {
+    LS.set('me_admin_mail', document.getElementById('trMail').value.trim());
+    toast('저장했습니다'); return;
+  }
+  if (e.target.id === 'trTest') {
+    var tm = document.getElementById('trTestMsg');
+    tm.textContent = '확인하는 중…';
+    mmOne('올리브유', 'ko', 'es')
+      .then(function (r) { tm.innerHTML = '<b style="color:var(--ok)">잘 됩니다</b> — "올리브유" → "' + esc(r) + '"'; })
+      .catch(function (err) { tm.innerHTML = '<b style="color:var(--bad)">안 됩니다</b> — ' + esc(String(err.message || '').slice(0, 90)) +
+        '. 상품 편집 화면의 [클로드에게 번역 맡기기]를 쓰세요.'; });
     return;
   }
 
@@ -1057,32 +1376,6 @@ document.addEventListener('drop', function (e) {
   if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) takePhotos(e.dataTransfer.files);
 });
 
-/* ---------- 상품 추가 ---------- */
-function addProduct() {
-  function val(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
-  var name = {}, tag = {}, desc = {};
-  document.querySelectorAll('[data-a]').forEach(function (el) {
-    var v = el.value.trim(); if (!v) return;
-    ({ name: name, tag: tag, desc: desc })[el.dataset.a][el.dataset.l] = v;
-  });
-  if (!name.ko && !name.es && !name.en) return toast('이름을 하나 이상 넣어 주세요');
-  if (!name.en) name.en = name.es || name.ko;
-  if (!tag.en) tag.en = tag.es || tag.ko || '';
-  if (!desc.en) desc.en = desc.es || desc.ko || '';
-
-  var id = 'n' + (Date.now() % 100000);
-  D.add.push({
-    id: id, hall: val('a_hall'), cat: val('a_cat'), brand: val('a_brand'),
-    eur: val('a_eur') ? Math.round(parseFloat(val('a_eur')) * 100) / 100 : 0,
-    g: val('a_g'), stock: parseInt(val('a_stock'), 10) || 0,
-    badge: val('a_badge'), origin: val('a_origin'), img: val('a_img'),
-    name: name, tag: tag, desc: desc
-  });
-  save();
-  toast('추가했습니다. 상품 목록에서 확인하세요');
-  go('prod');
-}
-
 /* ---------- 오늘 환율 받아오기 ----------
    브라우저에서 바로 부릅니다. 막히는 회선이면 조용히 실패하고 직접 넣으라고 안내합니다. */
 function fetchRate() {
@@ -1166,6 +1459,10 @@ function exportData() {
     if (c.imgs && !c.imgs.length) delete c.imgs;
     if (c.imgs && c.imgs.length) c.img = c.imgs[0];            // 목록 화면은 img 한 장만 씁니다
     if (!c.img) delete c.img;
+    if (!c.hidden) delete c.hidden;
+    if (!c.dop) delete c.dop;
+    if (!c.origin) delete c.origin;
+    if (!c.badge) delete c.badge;
     lines.push('  ' + JSON.stringify(c) + ',');
   });
   lines.push('];');
