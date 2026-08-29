@@ -8,12 +8,65 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
-[[headers]]
-  for = "/assets/*"
-  [headers.values]
-    Cache-Control = "public, max-age=3600"
+# ─────────────────────────────────────────────────────────────
+# 캐시 규칙
+#
+# 여기가 한 번 문제를 일으켰던 자리입니다.
+# 예전에는 /assets/* 전부를 1시간 저장하게 해 두어서,
+# 상품 목록(data.js)을 새로 올려도 손님 화면이 1시간 동안 옛것을 보여 줬습니다.
+#
+# 그래서 지금은 이렇게 나눠 둡니다.
+#   - 상품 목록      : 절대 저장하지 않음. 늘 새로 받아옵니다.
+#   - 화면·글씨·코드 : 저장하되 열 때마다 "바뀌었나?" 물어봅니다. (안 바뀌었으면 안 받아 옴)
+#   - 사진·영상      : 5분만 저장. 사진을 새로 올려도 금방 바뀝니다.
+# ─────────────────────────────────────────────────────────────
 
-# 관리자 화면은 검색에 잡히지 않게 하고, 저장해 두지도 않습니다.
+# 상품 목록 — 늘 최신
+[[headers]]
+  for = "/assets/data.js"
+  [headers.values]
+    Cache-Control = "no-store, must-revalidate"
+
+# 서비스워커 — 이게 낡으면 나머지가 다 낡습니다
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
+# 화면
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
+# 코드·스타일 — 저장하되 매번 확인
+[[headers]]
+  for = "/assets/*.js"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
+[[headers]]
+  for = "/assets/*.css"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
+# 사진·영상 — 짧게만 저장
+[[headers]]
+  for = "/assets/img/*"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+
+[[headers]]
+  for = "/assets/video/*"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
+
+# 관리자 화면 — 검색 차단, 저장 안 함
 [[headers]]
   for = "/admin.html"
   [headers.values]

@@ -226,7 +226,7 @@ summary:focus-visible{outline:2px solid color-mix(in srgb,var(--cobalt) 50%,tran
   <div class="wrap savebar-in">
     <span class="msg" id="saveMsg"></span>
     <button class="btn" id="revertBtn">되돌리기</button>
-    <button class="btn primary" id="exportBtn">data.js 내보내기</button>
+    <button class="btn primary" id="exportBtn">사이트에 올리기 →</button>
   </div>
 </div>
 </div>
@@ -257,6 +257,7 @@ var LS = {
   del: function (k) { try { localStorage.removeItem(k); } catch (e) {} }
 };
 var KEY = 'me_admin_v1', PWKEY = 'me_admin_pw', TOKKEY = 'me_admin_nf';
+var SITE = 'https://symphonious-sundae-6ad00e.netlify.app';
 var LANGS = window.LANGS.map(function (l) { return l[0]; });      // ko es en fr de it zh
 var LANGNAME = {}; window.LANGS.forEach(function (l) { LANGNAME[l[0]] = l[1]; });
 var CATS = ['food', 'wine', 'craft', 'home', 'fashion', 'beauty'];
@@ -1111,6 +1112,22 @@ function vDeploy() {
   view(
     '<h2 class="sec">반영·배포</h2><p class="sub">여기서 고친 값을 손님 화면에 올리는 마지막 단계입니다.</p>' +
     missBlock() +
+    /* ── 한 번 누르면 끝나는 길 ── */
+    '<div class="panel" style="border-color:color-mix(in srgb,var(--cobalt) 40%,var(--line))">' +
+      '<h3>사이트에 바로 올리기 ' + (ghOn() ? '<span class="pill ok">연결됨</span>' : '<span class="pill warn">설정 필요</span>') + '</h3>' +
+      '<p class="hint">누르면 GitHub 저장소의 <span class="mono">assets/data.js</span> 를 덮어쓰고, ' +
+        'Netlify 가 알아서 새로 배포합니다. 내려받기 · 폴더에 옮기기 · 끌어다 놓기가 필요 없습니다. ' +
+        '아직 안 올라간 사진도 같이 올라갑니다.</p>' +
+      '<div class="row"><button class="btn primary" id="ghPub"' + (ghOn() ? '' : ' disabled') + '>사이트에 바로 올리기</button>' +
+        '<button class="btn" id="dlBtn">data.js 내려받기 (예전 방식)</button></div>' +
+      '<div id="ghBox" style="margin-top:14px"></div></div>' +
+
+    '<div class="panel"><h3>지금 사이트에 뭐가 올라가 있나</h3>' +
+      '<p class="hint">손님이 실제로 받는 파일을 캐시를 피해 직접 확인합니다. 배포한 뒤 이걸 눌러 보시면 반영됐는지 바로 알 수 있습니다.</p>' +
+      '<div class="row"><button class="btn primary" id="liveBtn">사이트 확인하기</button>' +
+      '<button class="btn" id="cacheBtn">이 기기에 저장된 화면 비우기</button></div>' +
+      '<div id="liveBox" style="margin-top:14px"></div></div>' +
+
     '<div class="cards"><div class="kpi' + (merged().length < BASE_P.length ? ' bad' : '') + '">' +
       '<div class="k">내보내면 상품이</div><div class="v">' + merged().length +
       '<span style="font-size:15px;color:var(--muted)"> 개</span></div>' +
@@ -1127,16 +1144,45 @@ function vDeploy() {
         (D.fx ? '<li><span class="pill warn">1</span><span class="t"><b>환율</b><span>기준환율 ₩' + fxNow().base.toLocaleString('ko-KR') + ' · 적용 ₩' + fxNow().rate.toLocaleString('ko-KR') + '</span></span></li>' : '') +
         '</ul></div>'
       : '<div class="panel"><p class="hint" style="margin:0">반영을 기다리는 변경이 없습니다. data.js 와 지금 화면이 같습니다.</p></div>') +
-    '<div class="panel"><h3>순서</h3><ul class="check">' +
-      '<li><span class="pill es">1</span><span class="t"><b>data.js 내보내기</b><span>아래 단추를 누르면 새 data.js 파일이 내려받아집니다.</span></span></li>' +
-      '<li><span class="pill es">2</span><span class="t"><b>파일 덮어쓰기</b><span>내려받은 data.js 를 mercado-euforia 폴더 안 <span class="mono">assets</span> 폴더에 덮어씁니다.</span></span></li>' +
-      '<li><span class="pill es">3</span><span class="t"><b>배포</b><span>폴더째 Netlify 배포 칸에 끌어다 놓습니다. (바탕화면의 <span class="mono">배포하기.bat</span> 참고)</span></span></li>' +
-      '<li><span class="pill es">4</span><span class="t"><b>확인 후 정리</b><span>사이트에 값이 제대로 보이면 아래 [내보낸 뒤 정리]를 눌러 이 브라우저의 임시 변경을 지웁니다.</span></span></li>' +
+    '<div class="panel"><h3>예전 방식 (토큰 없이 하실 때)</h3><ul class="check">' +
+      '<li><span class="pill es">1</span><span class="t"><b>data.js 내려받기</b><span>위 [data.js 내려받기 (예전 방식)] 단추입니다.</span></span></li>' +
+      '<li><span class="pill es">2</span><span class="t"><b>파일 덮어쓰기</b><span>내려받은 data.js 를 mercado-euforia 폴더 안 <span class="mono">assets</span> 폴더에 덮어씁니다. 여기를 빠뜨리면 아무 일도 안 일어납니다.</span></span></li>' +
+      '<li><span class="pill es">3</span><span class="t"><b>배포</b><span>폴더째 Netlify 배포 칸에 끌어다 놓거나, GitHub 에 올립니다.</span></span></li>' +
+      '<li><span class="pill es">4</span><span class="t"><b>확인 후 정리</b><span>[사이트 확인하기] 로 반영을 확인한 뒤 아래 [올린 뒤 정리]를 누릅니다.</span></span></li>' +
       '</ul>' +
       '<div class="row" style="margin-top:14px">' +
-        '<button class="btn primary" id="dlBtn"' + (dirty() ? '' : ' disabled') + '>data.js 내보내기</button>' +
-        '<button class="btn" id="clearBtn"' + (dirty() ? '' : ' disabled') + '>내보낸 뒤 정리</button>' +
+        '<button class="btn" id="clearBtn"' + (dirty() ? '' : ' disabled') + '>올린 뒤 정리</button>' +
       '</div></div>' +
+
+    '<div class="panel"><h3>GitHub 연결</h3>' +
+      '<p class="hint">이 사이트는 GitHub 저장소와 이어져 있어서, 저장소의 파일이 바뀌면 Netlify 가 자동으로 새로 배포합니다. ' +
+        '토큰을 한 번만 넣어 두면 대쉬보드에서 바로 올릴 수 있습니다.</p>' +
+      '<div class="grid2">' +
+        '<label class="fld"><span>저장소</span><input id="gh_repo" value="' + esc(ghCfg().repo) + '" placeholder="사용자명/저장소명"></label>' +
+        '<label class="fld"><span>가지(branch)</span><input id="gh_branch" value="' + esc(ghCfg().branch) + '"></label>' +
+      '</div>' +
+      '<label class="fld"><span>토큰 (fine-grained personal access token)</span>' +
+        '<input type="password" id="gh_token" value="' + esc(ghCfg().token) + '" placeholder="github_pat_…"></label>' +
+      '<div class="row"><button class="btn primary" id="ghSave">저장</button>' +
+        '<button class="btn" id="ghTest">연결 확인</button>' +
+        '<button class="btn danger" id="ghClear">토큰 지우기</button>' +
+        '<span id="ghStat"></span></div>' +
+      '<details style="margin-top:14px"><summary>토큰 만드는 법 (한 번만 하시면 됩니다)</summary>' +
+        '<ul class="check" style="margin-top:10px">' +
+        '<li><span class="pill es">1</span><span class="t"><b>GitHub → Settings → Developer settings</b>' +
+          '<span>맨 아래 <span class="mono">Personal access tokens → Fine-grained tokens</span> → Generate new token</span></span></li>' +
+        '<li><span class="pill es">2</span><span class="t"><b>Repository access</b>' +
+          '<span><b>Only select repositories</b> 를 고르고 <span class="mono">symphonious-sundae-6ad00e</span> 하나만 선택합니다. 다른 저장소는 절대 고르지 마세요.</span></span></li>' +
+        '<li><span class="pill es">3</span><span class="t"><b>Permissions → Repository permissions</b>' +
+          '<span><span class="mono">Contents</span> 를 <b>Read and write</b> 로. 나머지는 그대로 두세요.</span></span></li>' +
+        '<li><span class="pill es">4</span><span class="t"><b>Expiration</b>' +
+          '<span>90일 정도로 정하세요. 만료되면 여기서 다시 넣으시면 됩니다.</span></span></li>' +
+        '<li><span class="pill es">5</span><span class="t"><b>만든 토큰을 위 칸에 붙여넣고 [저장] → [연결 확인]</b>' +
+          '<span>토큰은 이 브라우저에만 저장되고 어디로도 보내지 않습니다.</span></span></li>' +
+        '</ul></details>' +
+      '<div class="note" style="margin-top:14px"><b>토큰은 열쇠입니다.</b> 이 대쉬보드는 암호가 걸려 있지만 ' +
+        '남이 쓰는 컴퓨터에서는 열지 마세요. 위처럼 <b>저장소 하나 · Contents 권한만 · 기한 있게</b> 만들면, ' +
+        '혹시 새어 나가도 이 쇼핑몰 파일 외에는 손댈 수 없습니다.</div></div>' +
     '<div class="note"><b>왜 한 번에 자동으로 안 올라가나요?</b> 이 사이트는 서버 없이 파일만으로 도는 구조라 빠르고 공짜이지만, 브라우저에서 곧장 서버 파일을 고칠 수는 없습니다. 지금 회사 네트워크에서 Netlify 배포 API 가 막혀 있어 제가 대신 올려 드리지도 못합니다. 주문이 늘어 매일 값을 바꾸게 되면, 그때 서버가 있는 구조(관리자 로그인 + 데이터베이스)로 옮기는 것이 맞습니다.</div>'
   );
 }
@@ -1194,7 +1240,24 @@ document.addEventListener('click', function (e) {
     if (!confirm('이 브라우저에 저장된 수정 내용을 모두 지웁니다. 계속할까요?')) return;
     D = { p: {}, add: [], del: {}, auto: {}, fx: null, ts: null }; LS.del(KEY); render(); toast('되돌렸습니다'); return;
   }
-  if (e.target.id === 'exportBtn' || e.target.id === 'dlBtn') { exportData(); return; }
+  if (e.target.id === 'exportBtn') { go('deploy'); return; }
+  if (e.target.id === 'dlBtn') { exportData(); return; }
+  if (e.target.id === 'liveBtn') { checkLive(); return; }
+  if (e.target.id === 'cacheBtn') { clearSiteCache(); return; }
+  /* ----- GitHub ----- */
+  if (e.target.id === 'ghPub') { publish(); return; }
+  if (e.target.id === 'ghWait') { watchDeploy(); return; }
+  if (e.target.id === 'ghSave') {
+    ghSet({ repo: document.getElementById('gh_repo').value.trim().replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, ''),
+            branch: document.getElementById('gh_branch').value.trim() || 'main',
+            token: document.getElementById('gh_token').value.trim() });
+    render(); toast('저장했습니다 — [연결 확인]을 눌러 보세요'); return;
+  }
+  if (e.target.id === 'ghTest') { ghCheck(); return; }
+  if (e.target.id === 'ghClear') {
+    if (!confirm('저장된 토큰을 지웁니다. 계속할까요?')) return;
+    LS.del(GHKEY); render(); toast('지웠습니다'); return;
+  }
   if (e.target.id === 'clearBtn') {
     if (!confirm('배포한 사이트에서 값이 제대로 보이는지 확인하셨나요? 확인했다면 임시 변경을 지웁니다.')) return;
     D = { p: {}, add: [], del: {}, auto: {}, fx: null, ts: null }; LS.del(KEY); render(); toast('정리했습니다'); return;
@@ -1468,17 +1531,271 @@ function loadOrders() {
     });
 }
 
-/* ---------- data.js 내보내기 ---------- */
-function exportData() {
-  var P = merged(), f = fxNow();
-  /* 상품이 확 줄었으면 한 번 물어봅니다. 모르고 내보내면 사이트에서 상품이 사라집니다. */
-  var was = BASE_P.length, now = P.length;
-  if (now < was) {
-    var gone = was - now;
-    if (!confirm('내보낼 상품이 ' + was + '개 → ' + now + '개 입니다. (' + gone + '개 줄어듦)\n\n' +
-        '이 파일을 assets 폴더에 넣고 배포하면 사이트에서도 그만큼 사라집니다.\n' +
-        '지운 상품은 [상품] 탭 맨 위에서 되살릴 수 있습니다.\n\n계속 내보낼까요?')) return;
+/* =========================================================================
+   GitHub 로 바로 올리기
+
+   이 사이트는 GitHub 저장소와 이어져 있습니다. main 가지에 파일이 바뀌면
+   Netlify 가 알아서 새로 배포합니다. 그래서 여기서 파일을 밀어 넣으면
+   내려받고 · 폴더에 옮기고 · 끌어다 놓는 세 단계가 통째로 사라집니다.
+
+   한 번에 여러 파일을 "한 개의 커밋" 으로 올립니다.
+   (파일마다 커밋하면 배포가 파일 수만큼 돌아 느려집니다.)
+   ========================================================================= */
+var GHKEY = 'me_admin_gh';
+function ghCfg() {
+  var c = LS.get(GHKEY, null) || {};
+  return { repo: c.repo || 'euforia-jpg/symphonious-sundae-6ad00e',
+           branch: c.branch || 'main', token: c.token || '' };
+}
+function ghSet(c) { LS.set(GHKEY, c); }
+function ghOn() { return !!ghCfg().token; }
+
+function gh(path, opt) {
+  var c = ghCfg();
+  opt = opt || {};
+  opt.headers = Object.assign({
+    'Authorization': 'Bearer ' + c.token,
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28'
+  }, opt.headers || {});
+  if (opt.body && typeof opt.body !== 'string') opt.body = JSON.stringify(opt.body);
+  return fetch('https://api.github.com/repos/' + c.repo + path, opt).then(function (r) {
+    if (r.status === 204) return null;
+    return r.json().then(function (j) {
+      if (!r.ok) {
+        var msg = (j && j.message) || ('HTTP ' + r.status);
+        if (r.status === 401) msg = '토큰이 맞지 않거나 만료됐습니다';
+        if (r.status === 403) msg = '이 토큰에 쓰기 권한이 없습니다 (Contents: Read and write 필요)';
+        if (r.status === 404) msg = '저장소나 가지를 찾지 못했습니다 — 저장소 이름과 토큰 범위를 확인해 주세요';
+        var e = new Error(msg); e.status = r.status; throw e;
+      }
+      return j;
+    });
+  });
+}
+/* 한글이 섞인 글을 GitHub 가 받는 형식(base64)으로 바꿉니다 */
+function b64(str) {
+  var bytes = new TextEncoder().encode(str), bin = '';
+  for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+/* files = [{path, b64}] — 전부 한 커밋으로 */
+function ghCommit(files, message, log) {
+  var c = ghCfg(), baseSha, treeSha;
+  log = log || function () {};
+  log('저장소 상태를 읽는 중…');
+  return gh('/git/ref/heads/' + encodeURIComponent(c.branch))
+    .then(function (ref) {
+      baseSha = ref.object.sha;
+      return gh('/git/commits/' + baseSha);
+    })
+    .then(function (cm) {
+      treeSha = cm.tree.sha;
+      log('파일 ' + files.length + '개를 올리는 중…');
+      var i = 0;
+      return files.reduce(function (chain, f) {
+        return chain.then(function (acc) {
+          return gh('/git/blobs', { method: 'POST', body: { content: f.b64, encoding: 'base64' } })
+            .then(function (b) {
+              log('올리는 중… (' + (++i) + '/' + files.length + ') ' + f.path.split('/').pop());
+              acc.push({ path: f.path, mode: '100644', type: 'blob', sha: b.sha });
+              return acc;
+            });
+        });
+      }, Promise.resolve([]));
+    })
+    .then(function (tree) {
+      log('묶는 중…');
+      return gh('/git/trees', { method: 'POST', body: { base_tree: treeSha, tree: tree } });
+    })
+    .then(function (t) {
+      return gh('/git/commits', { method: 'POST', body: { message: message, tree: t.sha, parents: [baseSha] } });
+    })
+    .then(function (cm) {
+      log('반영하는 중…');
+      return gh('/git/refs/heads/' + encodeURIComponent(c.branch), { method: 'PATCH', body: { sha: cm.sha } })
+        .then(function () { return cm; });
+    });
+}
+
+/* 올릴 파일 모으기: data.js + 아직 서버에 없는 사진·영상.
+   어떤 사진이 빠졌는지 아직 안 세어 봤으면 여기서 먼저 세어 봅니다 —
+   안 그러면 사진을 빠뜨린 채 올라갑니다. */
+function collectFiles() {
+  if (MISS === null) {
+    return new Promise(function (res) { checkFiles(function () { res(); }); }).then(gatherFiles);
   }
+  return gatherFiles();
+}
+function gatherFiles() {
+  var files = [{ path: 'assets/data.js', b64: b64(buildDataJs()) }];
+  var want = (MISS || []).slice();
+  if (!want.length) return Promise.resolve(files);
+  return want.reduce(function (chain, p) {
+    return chain.then(function () {
+      return window.MEDIA.get(p).then(function (rec) {
+        if (rec && rec.data) {
+          var comma = rec.data.indexOf(',');
+          files.push({ path: p, b64: rec.data.slice(comma + 1) });
+        }
+      });
+    });
+  }, Promise.resolve()).then(function () { return files; });
+}
+
+function publish() {
+  var box = document.getElementById('ghBox');
+  var btn = document.getElementById('ghPub');
+  if (!ghOn()) { box.innerHTML = '<div class="note">먼저 아래에서 GitHub 토큰을 넣고 [연결 확인]을 눌러 주세요.</div>'; return; }
+
+  var P = merged(), was = BASE_P.length, now = P.length;
+  if (now < was && !confirm('사이트 상품이 ' + was + '개 → ' + now + '개 가 됩니다. (' + (was - now) + '개 줄어듦)\n\n올린 뒤에도 [상품] 탭에서 되살릴 수 있습니다.\n계속할까요?')) return;
+
+  btn.disabled = true;
+  var log = function (m) { box.innerHTML = '<p class="hint" style="margin:0"><b>' + esc(m) + '</b></p>'; };
+  log('준비하는 중…');
+
+  collectFiles()
+    .then(function (files) {
+      var msg = '상품 ' + now + '개 반영' + (files.length > 1 ? ' · 사진 ' + (files.length - 1) + '장' : '') +
+                ' (관리자 대쉬보드)';
+      return ghCommit(files, msg, log).then(function (cm) { return { cm: cm, files: files }; });
+    })
+    .then(function (r) {
+      box.innerHTML =
+        '<div class="note" style="background:color-mix(in srgb,var(--ok) 9%,transparent);border-color:color-mix(in srgb,var(--ok) 32%,transparent)">' +
+        '<b>올렸습니다.</b> 파일 ' + r.files.length + '개 · <span class="mono">' + esc(r.cm.sha.slice(0, 7)) + '</span><br>' +
+        'Netlify 가 지금 새로 배포하고 있습니다. 보통 1~2분 걸립니다.</div>' +
+        '<div class="row" style="margin-top:10px"><button class="btn primary" id="ghWait">반영됐는지 지켜보기</button>' +
+        '<a class="btn" href="https://app.netlify.com/projects/symphonious-sundae-6ad00e/deploys" target="_blank" rel="noopener">배포 진행 보기 ↗</a></div>';
+      btn.disabled = false;
+      MISS = null;
+      setTimeout(watchDeploy, 1200);
+    })
+    .catch(function (err) {
+      box.innerHTML = '<div class="note"><b style="color:var(--bad)">올리지 못했습니다.</b><br>' + esc(err.message || '') +
+        '<br><br>아래 [data.js 내려받기] 로 예전 방식(폴더에 넣고 배포)도 그대로 쓰실 수 있습니다.</div>';
+      btn.disabled = false;
+    });
+}
+
+/* 배포가 끝날 때까지 사이트를 계속 들여다봅니다 */
+function watchDeploy() {
+  var box = document.getElementById('ghBox');
+  if (!box || location.protocol.indexOf('http') !== 0) return;
+  var want = merged().length, tries = 0;
+  var tick = function () {
+    tries++;
+    fetch('assets/data.js?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { return r.text(); })
+      .then(function (txt) {
+        var seg = txt.slice(Math.max(0, txt.indexOf('window.PRODUCTS')));
+        var n = (seg.match(/"id":\s*"?[A-Za-z0-9_-]+"?/g) || []).length;
+        if (n === want) {
+          box.innerHTML = '<div class="note" style="background:color-mix(in srgb,var(--ok) 12%,transparent);border-color:color-mix(in srgb,var(--ok) 40%,transparent)">' +
+            '<b>사이트에 반영됐습니다.</b> 지금 손님에게 상품 ' + n + '개가 보입니다.</div>';
+          return;
+        }
+        if (tries > 30) {
+          box.innerHTML = '<div class="note">아직 반영 전입니다 (사이트 ' + n + '개 / 올린 것 ' + want + '개). ' +
+            'Netlify 배포가 오래 걸리는 중일 수 있습니다. 잠시 뒤 [사이트 확인하기]를 눌러 보세요.</div>';
+          return;
+        }
+        box.innerHTML = '<p class="hint" style="margin:0"><b>배포를 기다리는 중…</b> ' +
+          '(사이트 ' + n + '개 → ' + want + '개, ' + tries * 5 + '초 경과)</p>';
+        setTimeout(tick, 5000);
+      })
+      .catch(function () { setTimeout(tick, 5000); });
+  };
+  tick();
+}
+
+function ghCheck() {
+  var box = document.getElementById('ghStat');
+  box.innerHTML = '<span class="pmeta">확인하는 중…</span>';
+  gh('').then(function (r) {
+    var canWrite = r.permissions && (r.permissions.push || r.permissions.admin);
+    box.innerHTML = '<span class="pill ' + (canWrite ? 'ok' : 'bad') + '">' + (canWrite ? '연결됨' : '읽기만 됨') + '</span> ' +
+      '<span class="pmeta">' + esc(r.full_name) + ' · ' + (r.private ? '비공개' : '공개') +
+      ' · 기본 가지 ' + esc(r.default_branch) + (canWrite ? '' : ' — 토큰에 Contents: Read and write 를 켜 주세요') + '</span>';
+  }).catch(function (e) {
+    box.innerHTML = '<span class="pill bad">안 됨</span> <span class="pmeta">' + esc(e.message || '') + '</span>';
+  });
+}
+
+/* ---------- 사이트에 진짜 뭐가 올라가 있나 ----------
+   손님이 보는 그 파일을 캐시를 완전히 피해서 직접 받아 봅니다.
+   "배포했는데 반영이 안 된다" 를 더 이상 짐작하지 않아도 됩니다. */
+function checkLive() {
+  var box = document.getElementById('liveBox');
+  if (!box) return;
+  box.innerHTML = '<p class="hint" style="margin:0">사이트에서 받아오는 중…</p>';
+
+  if (location.protocol.indexOf('http') !== 0) {
+    box.innerHTML = '<div class="note">이 확인은 <b>사이트 주소로 열었을 때</b>만 됩니다. ' +
+      '<span class="mono">' + esc(SITE) + '/admin.html</span> 로 들어가서 눌러 주세요.</div>';
+    return;
+  }
+  fetch('assets/data.js?t=' + Date.now(), { cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+    .then(function (txt) {
+      var seg = txt.slice(Math.max(0, txt.indexOf('window.PRODUCTS')));
+      var ids = (seg.match(/"id":\s*"?([A-Za-z0-9_-]+)"?/g) || []).map(function (s) {
+        return s.replace(/"id":\s*"?/, '').replace(/"$/, '');
+      });
+      var stamp = (txt.match(/내보냈습니다:\s*([0-9-]+)/) || txt.match(/판입니다:\s*([0-9-]+)/) || [])[1] || '';
+      var willBe = merged().length;
+      var same = ids.length === willBe;
+      var localIds = merged().map(function (p) { return String(p.id); });
+      var onlyLive = ids.filter(function (i) { return localIds.indexOf(i) < 0; });
+      var onlyHere = localIds.filter(function (i) { return ids.indexOf(i) < 0; });
+
+      box.innerHTML =
+        '<div class="cards" style="margin-bottom:12px">' +
+          '<div class="kpi ' + (same ? 'ok' : 'bad') + '"><div class="k">사이트에 올라간 상품</div>' +
+            '<div class="v">' + ids.length + '</div><div class="n">' + (stamp ? '파일 날짜 ' + esc(stamp) : '지금 손님이 보는 것') + '</div></div>' +
+          '<div class="kpi"><div class="k">내보내면 이렇게 됩니다</div>' +
+            '<div class="v">' + willBe + '</div><div class="n">지금 대쉬보드 기준</div></div>' +
+        '</div>' +
+        (same
+          ? '<div class="note" style="background:color-mix(in srgb,var(--ok) 9%,transparent);border-color:color-mix(in srgb,var(--ok) 30%,transparent)">' +
+            '<b>사이트가 최신입니다.</b> 대쉬보드와 사이트의 상품이 같습니다.</div>'
+          : '<div class="note"><b>아직 반영되지 않았습니다.</b>' +
+            (onlyLive.length ? ' 사이트에만 있는 상품: ' + esc(onlyLive.join(', ')) + '.' : '') +
+            (onlyHere.length ? ' 사이트에 아직 없는 상품: ' + esc(onlyHere.join(', ')) + '.' : '') +
+            ' 아래 순서대로 [data.js 내보내기] → <span class="mono">assets</span> 폴더에 덮어쓰기 → 배포 를 해 주세요.</div>');
+    })
+    .catch(function (err) {
+      box.innerHTML = '<div class="note">확인하지 못했습니다 (' + esc(String(err.message || '')) + '). ' +
+        '인터넷 연결이나 주소를 확인해 주세요.</div>';
+    });
+}
+
+/* 이 기기에 저장된 화면을 싹 비웁니다 (앱으로 설치한 뒤 옛 화면이 남을 때) */
+function clearSiteCache() {
+  var done = function () {
+    toast('저장된 화면을 비웠습니다 — 다시 불러옵니다');
+    setTimeout(function () { location.reload(); }, 900);
+  };
+  if ('caches' in window) {
+    caches.keys().then(function (keys) {
+      return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+    }).then(function () {
+      if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+        navigator.serviceWorker.getRegistrations().then(function (rs) {
+          rs.forEach(function (r) { r.update(); });
+          done();
+        });
+      } else done();
+    }).catch(done);
+  } else done();
+}
+
+/* ---------- data.js 내보내기 ---------- */
+/* data.js 본문을 만듭니다. 내려받기와 GitHub 올리기가 같은 것을 씁니다. */
+function buildDataJs() {
+  var P = merged(), f = fxNow();
   var today = new Date().toISOString().slice(0, 10);
   var lines = [];
   lines.push('/* Mercado Euforia — 상품 데이터.');
@@ -1508,8 +1825,17 @@ function exportData() {
   lines.push('/* 환율: 하나은행 매매기준율을 하루 한 번 받아 넣는 값 + 판매 버퍼 */');
   lines.push('window.FX = { base: ' + f.base + ', buffer: ' + f.buffer + ', at: ' + JSON.stringify(f.at) + ', source: ' + JSON.stringify(f.source) + ' };');
   lines.push('window.FX.rate = Math.round(window.FX.base * (1 + window.FX.buffer) * 10) / 10;');
-  var text = lines.join('\n') + '\n';
+  return lines.join('\n') + '\n';
+}
 
+function exportData() {
+  var was = BASE_P.length, now = merged().length;
+  if (now < was) {
+    if (!confirm('내보낼 상품이 ' + was + '개 → ' + now + '개 입니다. (' + (was - now) + '개 줄어듦)\n\n' +
+        '이 파일을 assets 폴더에 넣고 배포하면 사이트에서도 그만큼 사라집니다.\n' +
+        '지운 상품은 [상품] 탭 맨 위에서 되살릴 수 있습니다.\n\n계속 내보낼까요?')) return;
+  }
+  var text = buildDataJs();
   var blob = new Blob([text], { type: 'text/javascript;charset=utf-8' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = 'data.js';
