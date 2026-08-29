@@ -1,0 +1,332 @@
+/* ===== Mercado Euforia — 공통 스크립트 ===== */
+(function () {
+'use strict';
+
+var LS = {
+  get: function (k, d) { try { var v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set: function (k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+
+/* ---------- 상태 ---------- */
+var qs = new URLSearchParams(location.search);
+var S = {
+  lang: qs.get('lang') || LS.get('me_lang', null) || detectLang(),
+  cur:  LS.get('me_cur', null) || 'EUR',
+  hall: qs.get('hall') || LS.get('me_hall', 'es'),
+  cart: LS.get('me_cart', [])
+};
+if (!window.T['nav.home'][S.lang]) S.lang = 'en';
+if (S.lang === 'ko' && !LS.get('me_cur', null)) S.cur = 'KRW';
+
+function detectLang() {
+  var n = (navigator.language || 'en').slice(0, 2).toLowerCase();
+  return window.T['nav.home'][n] ? n : 'en';
+}
+function t(k) { var o = window.T[k]; return (o && (o[S.lang] || o.en)) || k; }
+/* 특정 언어로 못박아 읽습니다 (관 안내 문구용) */
+function tIn(k, lang) { var o = window.T[k]; return (o && (o[lang] || o.en)) || k; }
+
+/* 관마다 노리는 손님이 다릅니다.
+   Shop Spain = 스페인 상품을 한국 손님에게  -> 한국어 / 원화
+   Shop Korea = 한국 상품을 스페인 손님에게  -> 스페인어 / 유로 */
+var HALL_DEFAULT = { es: { lang: 'ko', cur: 'KRW' }, kr: { lang: 'es', cur: 'EUR' } };
+
+/* ---------- 돈 ---------- */
+var FX = window.FX;
+function toKRW(eur) { return Math.round(eur * FX.rate / 10) * 10; }
+function fmt(eur) {
+  return S.cur === 'KRW' ? '₩' + toKRW(eur).toLocaleString('ko-KR') : '€' + eur.toFixed(2);
+}
+function fmtAlt(eur) {
+  return S.cur === 'KRW' ? '€' + eur.toFixed(2) : '₩' + toKRW(eur).toLocaleString('ko-KR');
+}
+function fmtN(v) { return S.cur === 'KRW' ? '₩' + (Math.round(v / 10) * 10).toLocaleString('ko-KR') : '€' + v.toFixed(2); }
+function unit(eur) { return S.cur === 'KRW' ? toKRW(eur) : eur; }
+function fxLine() {
+  return '€1 = ₩' + FX.rate.toLocaleString('ko-KR', { maximumFractionDigits: 1 }) +
+         ' · ' + FX.source + ' · ' + FX.at + ' · ' + t('fx.daily');
+}
+
+/* ---------- 데이터 ---------- */
+var P = window.PRODUCTS, B = window.BRANDS;
+
+/* ---------- 관리자 대쉬보드(admin.html)에서 고친 값 ----------
+   admin.html 에서 저장한 값을 이 브라우저에서만 덮어씁니다.
+   내 눈으로 먼저 확인하는 단계입니다. 손님에게 정식으로 보이게 하려면
+   admin.html → [data.js 내보내기] → assets 폴더에 덮어쓰기 → 배포. */
+(function () {
+  var ov = LS.get('me_admin_v1', null);
+  if (!ov) return;
+  if (ov.fx) {
+    for (var k in ov.fx) if (ov.fx[k] !== '' && ov.fx[k] != null) FX[k] = ov.fx[k];
+    FX.rate = Math.round(FX.base * (1 + FX.buffer) * 10) / 10;
+  }
+  if (ov.p) for (var i = 0; i < P.length; i++) {
+    var o = ov.p[P[i].id];
+    if (o) for (var k2 in o) P[i][k2] = o[k2];
+  }
+  if (ov.add) for (var j = 0; j < ov.add.length; j++) P.push(ov.add[j]);
+})();
+var CATS = ['food', 'wine', 'craft', 'home', 'fashion', 'beauty'];
+var HUE = { food: 32, wine: 344, craft: 218, home: 168, fashion: 288, beauty: 8 };
+var ICON = {
+  food: '<path d="M9 2h6v3l2 3v12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V8l2-3V2z"/><path d="M7 12h10"/>',
+  wine: '<path d="M8 3h8l-1 6a3 3 0 0 1-6 0L8 3z"/><path d="M12 15v6"/><path d="M9 21h6"/>',
+  craft: '<path d="M12 3l9 9-9 9-9-9 9-9z"/><circle cx="12" cy="12" r="3.2"/>',
+  home: '<path d="M3 11h18a9 9 0 0 1-9 9 9 9 0 0 1-9-9z"/><path d="M12 11V4"/><path d="M9 6h6"/>',
+  fashion: '<path d="M4 5a8 8 0 0 0 8 8 8 8 0 0 0 8-8"/><path d="M12 13v3"/><circle cx="12" cy="18.5" r="2.6"/>',
+  beauty: '<path d="M10 2h4v4h-4z"/><path d="M8 6h8v13a3 3 0 0 1-3 3h-2a3 3 0 0 1-3-3V6z"/><path d="M8 13h8"/>'
+};
+var MARK = '<svg class="mk" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 36V22a7 7 0 0 1 14 0v14"/><path d="M24 36V22a7 7 0 0 1 14 0v14"/><path d="M6 41h36"/></svg>';
+
+
+/* ---------- 국기 (이미지 파일 없이 직접 그립니다. 어떤 기기에서나 똑같이 보입니다) ---------- */
+var FLAGS = {
+  ko:'<rect width="24" height="16" fill="#fff"/>' +
+     '<path d="M7.8 8A4.2 4.2 0 0 1 16.2 8A2.1 2.1 0 0 1 12 8A2.1 2.1 0 0 0 7.8 8Z" fill="#CD2E3A"/>' +
+     '<path d="M7.8 8A4.2 4.2 0 0 0 16.2 8A2.1 2.1 0 0 0 12 8A2.1 2.1 0 0 1 7.8 8Z" fill="#0047A0"/>' +
+     '<g fill="#111" opacity=".9"><rect x="2.4" y="3.1" width="3" height=".7" transform="rotate(28 3.9 3.45)"/>' +
+     '<rect x="2.4" y="4.3" width="3" height=".7" transform="rotate(28 3.9 4.65)"/>' +
+     '<rect x="18.6" y="11.2" width="3" height=".7" transform="rotate(28 20.1 11.55)"/>' +
+     '<rect x="18.6" y="12.4" width="3" height=".7" transform="rotate(28 20.1 12.75)"/></g>',
+  es:'<rect width="24" height="16" fill="#AA151B"/><rect y="4" width="24" height="8" fill="#F1BF00"/>',
+  en:'<rect width="24" height="16" fill="#012169"/>' +
+     '<path d="M0 0 24 16M24 0 0 16" stroke="#fff" stroke-width="3.2"/>' +
+     '<path d="M0 0 24 16M24 0 0 16" stroke="#C8102E" stroke-width="1.7"/>' +
+     '<path d="M12 0v16M0 8h24" stroke="#fff" stroke-width="5"/>' +
+     '<path d="M12 0v16M0 8h24" stroke="#C8102E" stroke-width="3"/>',
+  fr:'<rect width="8" height="16" fill="#002395"/><rect x="8" width="8" height="16" fill="#fff"/><rect x="16" width="8" height="16" fill="#ED2939"/>',
+  de:'<rect width="24" height="5.34" fill="#000"/><rect y="5.34" width="24" height="5.33" fill="#DD0000"/><rect y="10.67" width="24" height="5.33" fill="#FFCE00"/>',
+  it:'<rect width="8" height="16" fill="#008C45"/><rect x="8" width="8" height="16" fill="#F4F5F0"/><rect x="16" width="8" height="16" fill="#CD212A"/>',
+  zh:'<rect width="24" height="16" fill="#EE1C25"/>' +
+     '<g fill="#FFDE00"><path d="M4.6 2.1 5.4 4.3 7.7 4.4 5.9 5.8 6.5 8 4.6 6.7 2.7 8 3.3 5.8 1.5 4.4 3.8 4.3Z"/>' +
+     '<circle cx="9.2" cy="1.9" r=".85"/><circle cx="11" cy="3.8" r=".85"/>' +
+     '<circle cx="11" cy="6.3" r=".85"/><circle cx="9.2" cy="8.1" r=".85"/></g>'
+};
+function flag(code) {
+  return '<svg class="flag" viewBox="0 0 24 16" width="24" height="16" aria-hidden="true">' +
+    FLAGS[code] + '<rect width="24" height="16" fill="none" stroke="rgba(0,0,0,.18)" stroke-width="1"/></svg>';
+}
+
+function prod(id) { for (var i = 0; i < P.length; i++) if (String(P[i].id) === String(id)) return P[i]; return null; }
+function brand(id) { for (var i = 0; i < B.length; i++) if (B[i].id === id) return B[i]; return null; }
+function nm(p) { return p.name[S.lang] || p.name.en; }
+function tg(p) { return p.tag[S.lang] || p.tag.en; }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+function link(page, params) {
+  var u = page + '?lang=' + S.lang;
+  for (var k in params) u += '&' + k + '=' + encodeURIComponent(params[k]);
+  return u;
+}
+
+/* ---------- 장바구니 ---------- */
+function cartCount() { return S.cart.reduce(function (s, i) { return s + i.q; }, 0); }
+function cartAdd(id, q) {
+  var f = S.cart.filter(function (i) { return i.id === id; })[0];
+  if (f) f.q += q; else S.cart.push({ id: id, q: q });
+  LS.set('me_cart', S.cart); paintCartCount();
+}
+function cartRemove(id) {
+  S.cart = S.cart.filter(function (i) { return i.id !== id; });
+  LS.set('me_cart', S.cart); paintCartCount();
+}
+function subtotal() {
+  return S.cart.reduce(function (s, i) { var p = prod(i.id); return p ? s + unit(p.eur) * i.q : s; }, 0);
+}
+function freeFrom() { return S.cur === 'KRW' ? 120000 : 80; }
+function shipFee() { return subtotal() >= freeFrom() ? 0 : (S.cur === 'KRW' ? 18000 : 12.9); }
+
+/* ---------- 공통 UI ---------- */
+function pimgHTML(p, extra) {
+  if (p.img) return '<div class="pimg has-img' + (extra || '') + '"><img src="' + p.img + '" alt="" loading="lazy"></div>';
+  return '<div class="pimg' + (extra || '') + '" style="--h:' + HUE[p.cat] + '">' +
+    '<span class="gl"><svg viewBox="0 0 24 24">' + ICON[p.cat] + '</svg></span></div>';
+}
+function priceHTML(p) {
+  if (!p.eur) return '<div class="price">' + t('pd.ask') + '</div>';
+  return '<div class="price">' + fmt(p.eur) + '</div><div class="alt">' + fmtAlt(p.eur) + '</div>';
+}
+function pcard(p) {
+  var b = brand(p.brand);
+  var bd = '<span class="bdg eu">' + t(p.hall === 'es' ? 'hall.esSub' : 'hall.krSub') + '</span>';
+  if (p.badge) bd += '<span class="bdg ' + p.badge + '">' + (p.badge === 'new' ? 'NEW' : 'BEST') + '</span>';
+  return '<a class="pcard" href="' + link('product.html', { id: p.id }) + '">' +
+    pimgHTML(p) +
+    '<div class="body"><div class="brand">' + esc(b.name) + '</div>' +
+    '<div class="name">' + esc(nm(p)) + '</div>' +
+    '<div class="tag">' + esc(tg(p)) + '</div>' +
+    priceHTML(p) +
+    '<div class="badges">' + bd + '</div></div></a>';
+}
+function bcard(b) {
+  return '<a class="bcard" href="' + link('brand.html', { id: b.id }) + '">' +
+    '<div class="av" style="background:linear-gradient(140deg,hsl(' + b.h + ' 62% 58%),hsl(' + b.h + ' 55% 40%))">' + esc(b.name[0]) + '</div>' +
+    '<div class="bn">' + esc(b.name) + '</div>' +
+    '<div class="bl">' + esc(b.loc) + ' · ' + t('brand.since') + ' ' + b.since + '</div>' +
+    '<div class="bs">' + esc(b.story[S.lang] || b.story.en) + '</div></a>';
+}
+
+function header(active) {
+  var links = [['index.html', 'nav.home'], ['shop.html', 'nav.shop'], ['brands.html', 'nav.brands']];
+  return '<div class="wrap head-in">' +
+    '<div class="head-top">' +
+    '<a class="lockup" href="' + link('index.html', {}) + '">' + MARK + '<span class="wm">Mercado Euforia</span></a>' +
+    '<div class="head-tools">' +
+      '<button type="button" class="picker-btn" id="pickerBtn" aria-expanded="false" aria-controls="picker">' +
+        flag(S.lang) + '<span class="pb-t">' + S.lang.toUpperCase() + ' · ' + (S.cur === 'KRW' ? '₩' : '€') + '</span>' +
+        '<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>' +
+      '</button>' +
+      '<a class="cart-btn" href="' + link('cart.html', {}) + '">' +
+        '<svg viewBox="0 0 24 24"><path d="M3.5 4h2l2 11h10l2-8H7"/><circle cx="9.5" cy="19" r="1.4"/><circle cx="16.5" cy="19" r="1.4"/></svg>' +
+        '<span class="cart-lbl">' + t('nav.cart') + '</span>' +
+        '<span class="cart-n" id="cartN" hidden>0</span></a>' +
+    '</div></div>' +
+    '<nav class="nav">' + links.map(function (l) {
+      return '<a href="' + link(l[0], {}) + '"' + (active === l[0] ? ' aria-current="page"' : '') + '>' + t(l[1]) + '</a>';
+    }).join('') + '</nav>' +
+    '<div class="picker" id="picker" hidden>' +
+      '<div class="pk-h">' + t('ui.lang') + '</div>' +
+      '<div class="pk-langs">' + window.LANGS.map(function (l) {
+        return '<button type="button" class="pk-lang" data-lang="' + l[0] + '" aria-pressed="' + (l[0] === S.lang) + '">' +
+          flag(l[0]) + '<span>' + l[1] + '</span></button>';
+      }).join('') + '</div>' +
+      '<div class="pk-h">' + t('ui.currency') + '</div>' +
+      '<div class="curbar">' + [['EUR', '€'], ['KRW', '₩']].map(function (c) {
+        return '<button type="button" class="cur" data-cur="' + c[0] + '" aria-pressed="' + (c[0] === S.cur) + '">' + c[1] + ' ' + c[0] + '</button>';
+      }).join('') + '</div>' +
+      installBlock() +
+    '</div></div>';
+}
+function footer() {
+  return '<div class="wrap foot-in">' +
+    '<span class="lockup">' + MARK + '<span class="wm">Mercado Euforia</span></span>' +
+    '<span>' + t('foot.rights') + '</span>' +
+    '<span class="head-sp"></span>' +
+    '<a href="mailto:euforia@euforiatour.com">' + t('foot.contact') + ' · euforia@euforiatour.com</a>' +
+    '</div>';
+}
+function paintCartCount() {
+  var el = document.getElementById('cartN'); if (!el) return;
+  var n = cartCount(); el.textContent = n; el.hidden = n === 0;
+}
+function toast(msg) {
+  var el = document.getElementById('toast');
+  if (!el) { el = document.createElement('div'); el.id = 'toast'; el.className = 'toast'; document.body.appendChild(el); }
+  el.textContent = msg; el.classList.add('on');
+  clearTimeout(el._t); el._t = setTimeout(function () { el.classList.remove('on'); }, 1800);
+}
+
+function halls() {
+  return '<div class="halls">' + [['es', 'hall.esName', 'hall.esSub'], ['kr', 'hall.krName', 'hall.krSub']].map(function (h) {
+    var target = HALL_DEFAULT[h[0]].lang;   // 그 관이 노리는 손님의 언어로 적습니다
+    return '<button class="hall" data-hall="' + h[0] + '" data-h="' + h[0] + '" aria-pressed="' + (S.hall === h[0]) + '">' +
+      '<span class="hn"><span class="dot"></span><span class="ht">' + t(h[1]) + '</span>' +
+        '<span class="hf">' + flag(target) + '</span></span>' +
+      '<span class="hs" lang="' + target + '">' + tIn(h[2], target) + '</span></button>';
+  }).join('') + '</div>';
+}
+
+/* ---------- 부팅 ---------- */
+
+/* ---------- 앱으로 설치 ---------- */
+var deferredPrompt = null;
+function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+}
+function isIOS() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+}
+function installBlock() {
+  if (isStandalone()) return '';
+  if (isIOS()) {
+    return '<div class="pk-h" style="margin-top:16px">' + t('app.install') + '</div>' +
+      '<div class="ios-hint">' + t('app.ios') + '</div>';
+  }
+  if (!deferredPrompt) return '';
+  return '<div class="pk-h" style="margin-top:16px">' + t('app.install') + '</div>' +
+    '<button type="button" class="btn primary block" id="installBtn" style="padding:11px;font-size:14px">' +
+    t('app.install') + '</button>';
+}
+window.addEventListener('beforeinstallprompt', function (e) {
+  e.preventDefault();
+  deferredPrompt = e;
+  try { paint(); } catch (err) {}
+});
+window.addEventListener('appinstalled', function () { deferredPrompt = null; });
+
+/* ---------- 서비스 워커 (오프라인 · 빠른 실행) ---------- */
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  });
+}
+
+var PAGE = '', RENDER = function () {};
+function paint() {
+  document.documentElement.lang = S.lang;
+  document.documentElement.setAttribute('data-hall', S.hall);
+  var h = document.querySelector('.site-head'), f = document.querySelector('.site-foot');
+  if (h) h.innerHTML = header(PAGE);
+  if (f) f.innerHTML = footer();
+  paintCartCount();
+  RENDER();
+  syncUrl();
+}
+/* 주소창만 조용히 맞춰 둡니다. 페이지를 다시 불러오지 않으므로
+   파일을 그냥 열었을 때나 미리보기 창 안에서도 똑같이 동작합니다. */
+function syncUrl() {
+  try {
+    var u = new URL(location.href);
+    u.searchParams.set('lang', S.lang);
+    u.searchParams.set('hall', S.hall);
+    history.replaceState(null, '', u.pathname + u.search + u.hash);
+  } catch (e) {}
+}
+function boot(page, render) {
+  PAGE = page; RENDER = render;
+  paint();
+
+  document.addEventListener('click', function (e) {
+    var pb = e.target.closest('#pickerBtn');
+    var pk = document.getElementById('picker');
+    if (pb) {
+      var open = pk.hasAttribute('hidden');
+      if (open) { pk.removeAttribute('hidden'); } else { pk.setAttribute('hidden', ''); }
+      pb.setAttribute('aria-expanded', String(open));
+      return;
+    }
+    if (pk && !pk.hasAttribute('hidden') && !e.target.closest('#picker')) pk.setAttribute('hidden', '');
+
+    if (e.target.closest('#installBtn') && deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(function () { deferredPrompt = null; paint(); });
+      return;
+    }
+    var lb = e.target.closest('[data-lang]');
+    if (lb) { S.lang = lb.dataset.lang; LS.set('me_lang', S.lang); paint(); return; }
+    var cb = e.target.closest('[data-cur]');
+    if (cb) { S.cur = cb.dataset.cur; LS.set('me_cur', S.cur); paint(); return; }
+    var hb = e.target.closest('[data-hall]');
+    if (hb) {
+      var prev = S.hall, next = hb.dataset.hall;
+      S.hall = next; LS.set('me_hall', next);
+      /* 손님이 직접 다른 언어를 고른 상태가 아니라면, 새 관에 맞는 언어·통화로 바꿔 줍니다. */
+      if (prev !== next && S.lang === HALL_DEFAULT[prev].lang) {
+        S.lang = HALL_DEFAULT[next].lang; LS.set('me_lang', S.lang);
+        S.cur  = HALL_DEFAULT[next].cur;  LS.set('me_cur',  S.cur);
+      }
+      paint();
+    }
+  });
+}
+
+/* ---------- 밖으로 ---------- */
+window.ME = {
+  S: S, t: t, P: P, B: B, CATS: CATS, HUE: HUE, ICON: ICON, MARK: MARK,
+  prod: prod, brand: brand, nm: nm, tg: tg, esc: esc, link: link,
+  fmt: fmt, fmtAlt: fmtAlt, fmtN: fmtN, unit: unit, fxLine: fxLine, toKRW: toKRW,
+  pcard: pcard, bcard: bcard, pimgHTML: pimgHTML, flag: flag, repaint: paint, halls: halls, boot: boot, toast: toast,
+  cartAdd: cartAdd, cartRemove: cartRemove, cartCount: cartCount,
+  subtotal: subtotal, shipFee: shipFee, freeFrom: freeFrom
+};
+})();

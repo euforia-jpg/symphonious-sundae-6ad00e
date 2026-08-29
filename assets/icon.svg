@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Mercado Euforia app icon">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1E4FD8"/>
+      <stop offset="1" stop-color="#8438A0"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="114" fill="url(#g)"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"
+     transform="translate(85.6 57.2) scale(7.1)">
+    <path d="M10 36V22a7 7 0 0 1 14 0v14"/>
+    <path d="M24 36V22a7 7 0 0 1 14 0v14"/>
+    <path d="M6 41h36"/>
+  </g>
+</svg>

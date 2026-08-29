@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mercado Euforia — 유럽과 한국을, 한 장바구니 안에서</title>
+<meta name="description" content="스페인 밖으로 수출되지 않던 것들과, 한국에서 실제로 쓰는 것들. 소규모 생산자에게서 바로 받은 상품을 7개 언어로 만나 보세요.">
+<meta property="og:title" content="Mercado Euforia">
+<meta property="og:description" content="유럽과 한국을, 한 장바구니 안에서">
+<meta property="og:type" content="website">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1E4FD8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mercado">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<header class="site-head"></header>
+<main id="main" class="wrap"></main>
+<footer class="site-foot"></footer>
+
+<script src="assets/i18n.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  var M = window.ME, S = M.S, t = M.t;
+  M.boot('index.html', function () {
+    var es = S.hall === 'es';
+    var list = M.P.filter(function (p) { return p.hall === S.hall; });
+    var picks = list.filter(function (p) { return p.badge; }).slice(0, 8);
+    var brands = M.B.filter(function (b) { return b.hall === S.hall; });
+
+    document.getElementById('main').innerHTML =
+      M.halls() +
+      '<section class="hero">' +
+        '<div class="tag">' + t(es ? 'home.tagES' : 'home.tagKR') + '</div>' +
+        '<h1>' + t(es ? 'home.titleES' : 'home.titleKR').replace(/\n/g, '<br>') + '</h1>' +
+        '<p>' + t(es ? 'home.subES' : 'home.subKR') + '</p>' +
+        '<a class="cta" href="' + M.link('shop.html', {}) + '">' + t('home.cta') + '</a>' +
+      '</section>' +
+
+      '<section class="sec"><div class="sec-h"><div><h2>' + t('home.pick') + '</h2>' +
+        '<div class="sub">' + t('home.pickSub') + '</div></div>' +
+        '<a class="more" href="' + M.link('shop.html', {}) + '">' + t('home.more') + '</a></div>' +
+        '<div class="grid">' + picks.map(M.pcard).join('') + '</div></section>' +
+
+      '<section class="sec"><div class="sec-h"><div><h2>' + t('home.brands') + '</h2>' +
+        '<div class="sub">' + t('home.brandsSub') + '</div></div>' +
+        '<a class="more" href="' + M.link('brands.html', {}) + '">' + t('home.more') + '</a></div>' +
+        '<div class="brands">' + brands.map(M.bcard).join('') + '</div></section>' +
+
+      '<section class="sec"><div class="sec-h"><div><h2>' + t('home.all') + '</h2>' +
+        '<div class="sub">' + list.length + ' ' + t('cat.items') + '</div></div></div>' +
+        '<div class="grid">' + list.map(M.pcard).join('') + '</div></section>';
+  });
+})();
+</script>
+</body>
+</html>

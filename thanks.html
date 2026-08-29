@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>요청이 접수되었습니다 — Mercado Euforia</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1E4FD8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mercado">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<header class="site-head"></header>
+<main id="main" class="wrap"></main>
+<footer class="site-foot"></footer>
+<script src="assets/i18n.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  var M = window.ME, t = M.t;
+  try { localStorage.removeItem('me_cart'); } catch (e) {}
+  M.boot('index.html', function () {
+    document.getElementById('main').innerHTML =
+      '<div class="empty" style="padding:110px 20px">' +
+      '<div style="width:64px;height:64px;border-radius:50%;margin:0 auto 20px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);font-size:30px">&#10003;</div>' +
+      '<div class="big">' + t('ord.sent') + '</div>' +
+      '<p>' + t('ord.sentSub') + '</p>' +
+      '<p style="margin-top:24px"><a class="btn primary" href="' + M.link('index.html', {}) + '">' + t('nav.home') + '</a></p></div>';
+  });
+})();
+</script>
+</body>
+</html>

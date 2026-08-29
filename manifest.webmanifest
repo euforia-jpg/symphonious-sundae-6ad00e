@@ -1,0 +1,58 @@
+{
+  "name": "Mercado Euforia",
+  "short_name": "Mercado",
+  "description": "유럽과 한국을, 한 장바구니 안에서",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F1EFE9",
+  "theme_color": "#1E4FD8",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "scope": "./",
+  "lang": "ko",
+  "orientation": "portrait",
+  "categories": [
+    "shopping",
+    "food"
+  ],
+  "shortcuts": [
+    {
+      "name": "Shop Spain",
+      "url": "index.html?hall=es",
+      "icons": [
+        {
+          "src": "assets/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Shop Korea",
+      "url": "index.html?hall=kr",
+      "icons": [
+        {
+          "src": "assets/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

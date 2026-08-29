@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /cart.html
+Disallow: /thanks.html
+Disallow: /admin.html
+
+Sitemap: https://symphonious-sundae-6ad00e.netlify.app/sitemap.xml

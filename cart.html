@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>장바구니 — Mercado Euforia</title>
+<meta name="description" content="장바구니와 주문 요청.">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1E4FD8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mercado">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<header class="site-head"></header>
+
+<main class="wrap">
+  <section class="sec" style="padding-top:26px">
+    <div class="sec-h"><h2 id="cartTitle">장바구니</h2></div>
+    <div id="cartBody"></div>
+  </section>
+
+  <!-- Netlify Forms: 이 폼이 HTML에 그대로 있어야 Netlify가 인식합니다. -->
+  <section id="formSec" class="sec" hidden>
+    <form class="form" name="order" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="thanks.html">
+      <input type="hidden" name="form-name" value="order">
+      <p hidden><label>봇 방지 <input name="bot-field"></label></p>
+      <input type="hidden" name="주문내역" id="fItems">
+      <input type="hidden" name="합계" id="fTotal">
+      <input type="hidden" name="언어" id="fLang">
+
+      <h2 id="fTitle">주문 요청</h2>
+      <p class="lede" id="fLede"></p>
+
+      <div class="fgrid">
+        <div class="field">
+          <label for="iName" id="lName">받는 분 성함 <span class="req">*</span></label>
+          <input id="iName" name="성함" required autocomplete="name">
+        </div>
+        <div class="field">
+          <label for="iEmail" id="lEmail">이메일 <span class="req">*</span></label>
+          <input id="iEmail" name="이메일" type="email" required autocomplete="email">
+        </div>
+        <div class="field">
+          <label for="iPhone" id="lPhone">연락처</label>
+          <input id="iPhone" name="연락처" autocomplete="tel">
+        </div>
+        <div class="field">
+          <label for="iCountry" id="lCountry">배송 국가 <span class="req">*</span></label>
+          <input id="iCountry" name="배송국가" required autocomplete="country-name">
+        </div>
+        <div class="field full">
+          <label for="iAddr" id="lAddr">주소 <span class="req">*</span></label>
+          <input id="iAddr" name="주소" required autocomplete="street-address">
+        </div>
+        <div class="field full">
+          <label for="iPcc" id="lPcc">개인통관고유부호 (한국 배송만)</label>
+          <input id="iPcc" name="개인통관고유부호" placeholder="P000000000000">
+        </div>
+        <div class="field full">
+          <label for="iMemo" id="lMemo">요청사항</label>
+          <textarea id="iMemo" name="요청사항"></textarea>
+        </div>
+      </div>
+      <button type="submit" class="btn primary block" id="fSubmit" style="margin-top:18px">주문 요청 보내기</button>
+    </form>
+  </section>
+</main>
+
+<footer class="site-foot"></footer>
+
+<script src="assets/i18n.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  var M = window.ME, S = M.S, t = M.t;
+
+  function line(i) {
+    var p = M.prod(i.id); if (!p) return '';
+    var b = M.brand(p.brand);
+    return '<div class="citem">' +
+      M.pimgHTML(p) +
+      '<div class="ci"><div class="cb">' + M.esc(b.name) + '</div>' +
+      '<div class="cn">' + M.esc(M.nm(p)) + '</div>' +
+      '<div class="cp">' + M.fmt(p.eur) + ' × ' + i.q + '</div></div>' +
+      '<button type="button" class="rm" data-rm="' + p.id + '">' + t('cart.remove') + '</button></div>';
+  }
+
+  function draw() {
+    document.getElementById('cartTitle').textContent = t('cart.title');
+    var body = document.getElementById('cartBody');
+    var sec = document.getElementById('formSec');
+
+    if (!S.cart.length) {
+      sec.hidden = true;
+      body.innerHTML = '<div class="empty"><div class="big">' + t('cart.empty') + '</div>' +
+        '<p>' + t('cart.emptySub') + '</p>' +
+        '<p style="margin-top:20px"><a class="btn primary" href="' + M.link('shop.html', {}) + '">' + t('home.cta') + '</a></p></div>';
+      return;
+    }
+
+    var st = M.subtotal(), sf = M.shipFee();
+    body.innerHTML =
+      '<div class="cart-grid"><div>' + S.cart.map(line).join('') + '</div>' +
+      '<aside class="summary">' +
+        '<div class="r"><span>' + t('cart.sub') + '</span><span>' + M.fmtN(st) + '</span></div>' +
+        '<div class="r"><span>' + t('cart.ship') + '</span><span>' + (sf ? M.fmtN(sf) : t('cart.free')) + '</span></div>' +
+        '<div class="r total"><span>' + t('cart.total') + '</span><span>' + M.fmtN(st + sf) + '</span></div>' +
+        (sf ? '<div class="note">' + t('cart.freeFrom').replace('{0}', M.fmtN(M.freeFrom())) + '</div>' : '') +
+        '<div class="note">' + t('cart.duty') + '</div>' +
+        '<div class="note">' + M.fxLine() + '<br><br>' + t('fx.note') + '</div>' +
+      '</aside></div>';
+
+    sec.hidden = false;
+    document.getElementById('fTitle').textContent = t('ord.title');
+    document.getElementById('fLede').textContent = t('ord.lede');
+    document.getElementById('fSubmit').textContent = t('ord.submit');
+    var labels = { lName: 'ord.name', lEmail: 'ord.email', lPhone: 'ord.phone', lCountry: 'ord.country', lAddr: 'ord.addr', lPcc: 'ord.pcc', lMemo: 'ord.memo' };
+    Object.keys(labels).forEach(function (k) {
+      var el = document.getElementById(k);
+      var req = el.querySelector('.req');
+      el.textContent = t(labels[k]) + ' ';
+      if (req) el.appendChild(req);
+    });
+
+    document.getElementById('fItems').value = S.cart.map(function (i) {
+      var p = M.prod(i.id);
+      return '#' + p.id + ' ' + p.name.ko + ' × ' + i.q + ' (€' + p.eur.toFixed(2) + ')';
+    }).join(' / ');
+    document.getElementById('fTotal').value = '€' + (S.cart.reduce(function (s, i) {
+      var p = M.prod(i.id); return p ? s + p.eur * i.q : s;
+    }, 0)).toFixed(2) + ' + ' + t('cart.ship');
+    document.getElementById('fLang').value = S.lang;
+  }
+
+  M.boot('cart.html', draw);
+
+  document.addEventListener('click', function (e) {
+    var r = e.target.closest('[data-rm]');
+    if (r) { M.cartRemove(+r.dataset.rm); draw(); }
+  });
+})();
+</script>
+</body>
+</html>

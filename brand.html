@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>생산자 — Mercado Euforia</title>
+<meta name="description" content="생산자 소개와 취급 상품.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1E4FD8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mercado">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<header class="site-head"></header>
+<main id="main" class="wrap"></main>
+<footer class="site-foot"></footer>
+<script src="assets/i18n.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  var M = window.ME, t = M.t;
+  var id = new URLSearchParams(location.search).get('id');
+  var b = M.brand(id);
+  M.boot('brands.html', function () {
+    var main = document.getElementById('main');
+    if (!b) { main.innerHTML = '<div class="empty"><div class="big">' + t('pd.notfound') + '</div></div>'; return; }
+    document.title = b.name + ' — Mercado Euforia';
+    var list = M.P.filter(function (p) { return p.brand === b.id; });
+    main.innerHTML =
+      '<section class="hero" style="background:linear-gradient(135deg,hsl(' + b.h + ' 58% 46%),hsl(' + b.h + ' 52% 30%))">' +
+        '<div class="tag">' + M.esc(b.loc) + ' · ' + t('brand.since') + ' ' + b.since + '</div>' +
+        '<h1>' + M.esc(b.name) + '</h1>' +
+        '<p>' + M.esc(b.story[M.S.lang] || b.story.en) + '</p>' +
+      '</section>' +
+      '<section class="sec"><div class="sec-h"><div><h2>' + t('brand.products') + '</h2>' +
+      '<div class="sub">' + list.length + ' ' + t('cat.items') + '</div></div></div>' +
+      '<div class="grid">' + list.map(M.pcard).join('') + '</div></section>';
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>상품 — Mercado Euforia</title>
+<meta name="description" content="원산지와 생산자를 확인한 상품입니다.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1E4FD8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mercado">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<header class="site-head"></header>
+<main id="main" class="wrap"></main>
+<footer class="site-foot"></footer>
+
+<script src="assets/i18n.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  var M = window.ME, S = M.S, t = M.t;
+  var id = new URLSearchParams(location.search).get('id');
+  var p = M.prod(id);
+  var qty = 1;
+
+  function draw() {
+    var main = document.getElementById('main');
+    if (!p) {
+      main.innerHTML = '<div class="empty"><div class="big">' + t('pd.notfound') + '</div>' +
+        '<p style="margin-top:16px"><a class="btn ghost" href="' + M.link('shop.html', {}) + '">' + t('pd.back') + '</a></p></div>';
+      return;
+    }
+    var b = M.brand(p.brand), es = p.hall === 'es';
+    document.title = M.nm(p) + ' — Mercado Euforia';
+    var d = document.querySelector('meta[name="description"]'); if (d) d.setAttribute('content', M.tg(p));
+
+    main.innerHTML =
+      '<div class="pd">' +
+        M.pimgHTML(p) +
+        '<div>' +
+          '<a class="maker" href="' + M.link('brand.html', { id: b.id }) + '">' + M.esc(b.name) + ' · ' + M.esc(b.loc) + ' →</a>' +
+          '<h1>' + M.esc(M.nm(p)) + '</h1>' +
+          '<p class="lead">' + M.esc(M.tg(p)) + '</p>' +
+          '<div class="badges" style="margin-top:14px"><span class="bdg eu">' + t('cat.' + p.cat) + '</span>' +
+            (p.badge ? '<span class="bdg ' + p.badge + '">' + (p.badge === 'new' ? 'NEW' : 'BEST') + '</span>' : '') + '</div>' +
+          (p.eur
+            ? '<div class="price-row"><span class="main">' + M.fmt(p.eur) + '</span><span class="alt">' + M.fmtAlt(p.eur) + '</span></div>' +
+              '<div class="fxline">' + M.fxLine() + '</div>' +
+              '<div class="fxnote">' + t('fx.note') + '</div>'
+            : '<div class="price-row"><span class="main">' + t('pd.ask') + '</span></div>') +
+          (p.desc ? '<section class="pdesc"><h2>' + t('pd.about') + '</h2>' +
+              (p.desc[S.lang] || p.desc.en).split(/(?<=[.。])\s*/).filter(Boolean)
+                .reduce(function (acc, s2, i2) {
+                  var k = Math.floor(i2 / 2);
+                  acc[k] = (acc[k] ? acc[k] + ' ' : '') + s2;
+                  return acc;
+                }, []).map(function (para) { return '<p>' + M.esc(para) + '</p>'; }).join('') +
+            '</section>' : '') +
+          '<div class="seal"><span class="ring">EU</span><span><b>' + t(es ? 'pd.sealES' : 'pd.sealKR') + '</b>' + t(es ? 'pd.sealESsub' : 'pd.sealKRsub') + '</span></div>' +
+          '<dl class="spec">' +
+            '<div class="row"><dt>' + t('pd.origin') + '</dt><dd>' + M.esc(p.origin || b.loc) + '</dd></div>' +
+            (p.dop ? '<div class="row"><dt>' + t('pd.dop') + '</dt><dd>' + M.esc(p.dop) + '</dd></div>' : '') +
+            '<div class="row"><dt>' + t('pd.weight') + '</dt><dd>' + M.esc(p.g || t('pd.tbd')) + '</dd></div>' +
+            (p.allergens && p.allergens.length
+              ? '<div class="row"><dt>' + t('pd.allergen') + '</dt><dd>' + p.allergens.map(function (a) { return t('al.' + a); }).join(', ') + '</dd></div>'
+              : '') +
+            '<div class="row"><dt>' + t('pd.ship') + '</dt><dd>' + t('pd.shipVal') + '</dd></div>' +
+            (p.eur ? '<div class="row"><dt>' + t('pd.stock') + '</dt><dd>' + p.stock + '</dd></div>' : '') +
+          '</dl>' +
+          (p.eur
+            ? '<div class="buy">' +
+                '<div class="qty"><button type="button" data-q="-1" aria-label="−">−</button>' +
+                '<span class="n" id="qn">' + qty + '</span>' +
+                '<button type="button" data-q="1" aria-label="+">+</button></div>' +
+                '<button type="button" class="btn primary" id="addBtn">' + t('pd.addCart') + '</button>' +
+              '</div>'
+            : '<div class="buy"><a class="btn primary" href="mailto:euforia@euforiatour.com?subject=' +
+                encodeURIComponent(M.nm(p)) + '">' + t('pd.ask') + '</a></div>') +
+          '<p style="margin-top:14px"><a href="' + M.link('shop.html', {}) + '" style="font-size:13.5px;color:var(--muted);text-decoration:underline">' + t('pd.back') + '</a></p>' +
+        '</div>' +
+      '</div>' +
+      (function () {
+        var more = M.P.filter(function (x) { return x.brand === b.id && x.id !== p.id; });
+        if (!more.length) return '';
+        return '<section class="sec"><div class="sec-h"><div><h2>' + t('pd.more') + '</h2>' +
+          '<div class="sub">' + M.esc(b.name) + '</div></div></div>' +
+          '<div class="grid">' + more.map(M.pcard).join('') + '</div></section>';
+      })();
+  }
+
+  M.boot('product.html', draw);
+
+  document.addEventListener('click', function (e) {
+    var q = e.target.closest('[data-q]');
+    if (q) { qty = Math.max(1, qty + (+q.dataset.q)); document.getElementById('qn').textContent = qty; return; }
+    if (e.target.closest('#addBtn')) { M.cartAdd(p.id, qty); M.toast(t('pd.added')); }
+  });
+})();
+</script>
+</body>
+</html>

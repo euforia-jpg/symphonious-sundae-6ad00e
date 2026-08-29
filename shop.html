@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>전체 상품 — Mercado Euforia</title>
+<meta name="description" content="식품, 와인, 공예, 리빙, 패션, 뷰티. 카테고리와 가격대로 골라 보세요.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1E4FD8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mercado">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<header class="site-head"></header>
+<main id="main" class="wrap"></main>
+<footer class="site-foot"></footer>
+
+<script src="assets/i18n.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  var M = window.ME, S = M.S, t = M.t;
+  var qs = new URLSearchParams(location.search);
+  var st = { cat: qs.get('cat') || 'all', sort: 'rec', band: 'all' };
+  var BANDS = { all: [0, 1e9], b1: [0, 25], b2: [25, 60], b3: [60, 1e9] };
+
+  function bandLabel(k) {
+    if (k === 'all') return t('price.all');
+    var cut = function (v) {
+      return S.cur === 'KRW' ? '₩' + (Math.round(M.toKRW(v) / 1000) * 1000).toLocaleString('ko-KR') : '€' + v;
+    };
+    if (k === 'b1') return '~ ' + cut(25);
+    if (k === 'b2') return cut(25) + ' – ' + cut(60);
+    return cut(60) + ' ~';
+  }
+
+  function draw() {
+    var all = M.P.filter(function (p) { return p.hall === S.hall; });
+    var b = BANDS[st.band];
+    var list = all.filter(function (p) {
+      return (st.cat === 'all' || p.cat === st.cat) && p.eur >= b[0] && p.eur < b[1];
+    });
+    if (st.sort === 'new')  list = list.slice().sort(function (a, c) { return (c.badge === 'new' ? 1 : 0) - (a.badge === 'new' ? 1 : 0) || c.id - a.id; });
+    if (st.sort === 'low')  list = list.slice().sort(function (a, c) { return a.eur - c.eur; });
+    if (st.sort === 'high') list = list.slice().sort(function (a, c) { return c.eur - a.eur; });
+
+    var cats = ['all'].concat(M.CATS.filter(function (c) { return all.some(function (p) { return p.cat === c; }); }));
+
+    document.getElementById('main').innerHTML =
+      M.halls() +
+      '<section class="sec" style="padding-top:26px"><div class="sec-h"><div><h2>' + t('cat.title') + '</h2>' +
+        '<div class="sub">' + list.length + ' ' + t('cat.items') + ' · ' + t('sort.' + st.sort) + '</div></div></div>' +
+      '<div class="filters">' +
+        '<div class="chips">' + cats.map(function (c) {
+          return '<button class="chip" data-cat="' + c + '" aria-pressed="' + (st.cat === c) + '">' + t('cat.' + c) + '</button>';
+        }).join('') + '</div>' +
+        '<div class="chips">' + ['rec', 'new', 'low', 'high'].map(function (k) {
+          return '<button class="chip sm" data-sort="' + k + '" aria-pressed="' + (st.sort === k) + '">' + t('sort.' + k) + '</button>';
+        }).join('') + '</div>' +
+        '<div class="chips">' + ['all', 'b1', 'b2', 'b3'].map(function (k) {
+          return '<button class="chip sm" data-band="' + k + '" aria-pressed="' + (st.band === k) + '">' + bandLabel(k) + '</button>';
+        }).join('') + '</div>' +
+      '</div>' +
+      (list.length ? '<div class="grid">' + list.map(M.pcard).join('') + '</div>'
+                   : '<div class="empty"><div class="big">' + t('cat.none') + '</div></div>') +
+      '</section>';
+  }
+
+  M.boot('shop.html', draw);
+
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-cat],[data-sort],[data-band]');
+    if (!el) return;
+    if (el.dataset.cat)  st.cat  = el.dataset.cat;
+    if (el.dataset.sort) st.sort = el.dataset.sort;
+    if (el.dataset.band) st.band = el.dataset.band;
+    draw();
+  });
+})();
+</script>
+</body>
+</html>
