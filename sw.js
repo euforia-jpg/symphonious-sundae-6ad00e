@@ -2,7 +2,7 @@
    화면(HTML)은 항상 새것을 먼저 받아옵니다. 그래서 사이트를 새로 배포하면 바로 반영됩니다.
    그림·스타일·스크립트는 저장해 두었다가 먼저 보여 주고 뒤에서 갱신합니다. 그래서 빠릅니다.
    인터넷이 끊겨도 마지막으로 봤던 화면은 열립니다. */
-var VERSION = 'me-2026-08-29-3';
+var VERSION = 'me-2026-08-29-4';
 var CORE = [
   './', 'index.html', 'shop.html', 'product.html', 'brands.html', 'brand.html',
   'cart.html', 'thanks.html',

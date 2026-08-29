@@ -39,6 +39,8 @@ window.T = {
 'cat.fashion':{ko:'패션·주얼리',es:'Moda y joyas',en:'Fashion & jewellery',fr:'Mode et bijoux',de:'Mode & Schmuck',it:'Moda e gioielli',zh:'时尚饰品'},
 'cat.beauty':{ko:'뷰티',es:'Belleza',en:'Beauty',fr:'Beauté',de:'Beauty',it:'Bellezza',zh:'美妆'},
 'cat.items':{ko:'개',es:'art.',en:'items',fr:'art.',de:'Art.',it:'art.',zh:'件'},
+'home.soon':{ko:'이 관은 지금 상품을 준비하고 있습니다',es:'Estamos preparando los productos de esta sección',en:'We are preparing the products for this hall',fr:'Nous préparons les produits de cette section',de:'Wir bereiten die Produkte für diesen Bereich vor',it:'Stiamo preparando i prodotti di questa sezione',zh:'本馆商品正在准备中'},
+'home.soonSub':{ko:'곧 만나 보실 수 있습니다.',es:'Muy pronto.',en:'Coming soon.',fr:'Bientôt disponible.',de:'Demnächst.',it:'Molto presto.',zh:'敬请期待。'},
 'cat.none':{ko:'조건에 맞는 상품이 없습니다',es:'No hay productos con estos filtros',en:'No products match these filters',fr:'Aucun produit ne correspond',de:'Keine Produkte für diese Filter',it:'Nessun prodotto con questi filtri',zh:'没有符合条件的商品'},
 
 'sort.rec':{ko:'추천순',es:'Recomendados',en:'Recommended',fr:'Recommandés',de:'Empfohlen',it:'Consigliati',zh:'推荐'},

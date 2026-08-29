@@ -459,6 +459,7 @@ function vProd() {
 
   view(
     '<h2 class="sec">상품</h2><p class="sub">칸을 직접 고치면 바로 저장됩니다. 가격은 유로로만 넣으세요 — 원화는 환율로 자동 계산됩니다.</p>' +
+    trashBlock() +
     '<div class="panel"><div class="row">' +
       '<input id="fq" placeholder="이름·브랜드·번호로 찾기" style="max-width:230px" value="' + esc(FILT.q) + '">' +
       '<select class="s" id="fhall" style="width:150px"><option value="">전체 관</option>' +
@@ -484,6 +485,24 @@ function vProd() {
     '</tbody></table></div>'
   );
 }
+/* 지운 상품은 data.js 에 아직 남아 있으므로 언제든 되살릴 수 있습니다.
+   (여기서 새로 만든 상품은 지우면 그걸로 끝입니다 — 원본이 없으니까요.) */
+function trashBlock() {
+  var ids = Object.keys(D.del);
+  if (!ids.length) return '';
+  return '<div class="panel" style="border-color:color-mix(in srgb,var(--bad) 40%,var(--line))">' +
+    '<h3>지운 상품 ' + ids.length + '개 <span class="pill bad">아직 되살릴 수 있음</span></h3>' +
+    '<p class="hint">내보낸 data.js 를 배포하면 사이트에서 빠집니다. 잘못 지우셨다면 지금 되살리세요.</p>' +
+    '<div class="row" style="gap:6px">' +
+      ids.slice(0, 40).map(function (id) {
+        var b = baseById(id);
+        return '<button class="btn sm" data-undel="' + esc(id) + '">↩ ' + esc(b ? (b.name.ko || b.name.en) : id) + '</button>';
+      }).join('') +
+    '</div>' +
+    (ids.length > 40 ? '<p class="hint" style="margin-top:8px">…외 ' + (ids.length - 40) + '개</p>' : '') +
+    '<div class="row" style="margin-top:12px"><button class="btn primary" id="undelAll">전부 되살리기</button></div></div>';
+}
+
 function rowHTML(p) {
   var b = brand(p.brand), iss = issues(p), isNew = String(p.id).indexOf('n') === 0;
   return '<tr data-id="' + p.id + '"' + (D.p[p.id] || isNew ? ' class="edited"' : '') + '>' +
@@ -1092,6 +1111,12 @@ function vDeploy() {
   view(
     '<h2 class="sec">반영·배포</h2><p class="sub">여기서 고친 값을 손님 화면에 올리는 마지막 단계입니다.</p>' +
     missBlock() +
+    '<div class="cards"><div class="kpi' + (merged().length < BASE_P.length ? ' bad' : '') + '">' +
+      '<div class="k">내보내면 상품이</div><div class="v">' + merged().length +
+      '<span style="font-size:15px;color:var(--muted)"> 개</span></div>' +
+      '<div class="n">지금 data.js 는 ' + BASE_P.length + '개' +
+      (merged().length < BASE_P.length ? ' · ' + (BASE_P.length - merged().length) + '개 줄어듭니다' : '') + '</div></div></div>' +
+    trashBlock() +
     (dirty()
       ? '<div class="panel"><h3>지금 반영을 기다리는 것</h3><ul class="check">' +
         (n ? '<li><span class="pill warn">' + n + '</span><span class="t"><b>고친 상품</b><span>' + Object.keys(D.p).map(function (id) { var p = merged().filter(function (x) { return String(x.id) === String(id); })[0]; return p ? nm(p) : id; }).join(', ') + '</span></span></li>' : '') +
@@ -1203,6 +1228,11 @@ document.addEventListener('click', function (e) {
   if (e.target.id === 'eDel') { delProduct(ESEL); return; }
   var db = e.target.closest('[data-del]');
   if (db) { delProduct(db.dataset.del); return; }
+  var ub = e.target.closest('[data-undel]');
+  if (ub) { delete D.del[ub.dataset.undel]; MISS = null; save(); render(); toast('되살렸습니다'); return; }
+  if (e.target.id === 'undelAll') {
+    D.del = {}; MISS = null; save(); render(); toast('지운 상품을 모두 되살렸습니다'); return;
+  }
   var tb2 = e.target.closest('[data-tr]');
   if (tb2) { autoTranslate(tb2.dataset.tr); return; }
   var ok = e.target.closest('[data-ok]');
@@ -1441,6 +1471,14 @@ function loadOrders() {
 /* ---------- data.js 내보내기 ---------- */
 function exportData() {
   var P = merged(), f = fxNow();
+  /* 상품이 확 줄었으면 한 번 물어봅니다. 모르고 내보내면 사이트에서 상품이 사라집니다. */
+  var was = BASE_P.length, now = P.length;
+  if (now < was) {
+    var gone = was - now;
+    if (!confirm('내보낼 상품이 ' + was + '개 → ' + now + '개 입니다. (' + gone + '개 줄어듦)\n\n' +
+        '이 파일을 assets 폴더에 넣고 배포하면 사이트에서도 그만큼 사라집니다.\n' +
+        '지운 상품은 [상품] 탭 맨 위에서 되살릴 수 있습니다.\n\n계속 내보낼까요?')) return;
+  }
   var today = new Date().toISOString().slice(0, 10);
   var lines = [];
   lines.push('/* Mercado Euforia — 상품 데이터.');

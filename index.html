@@ -48,19 +48,28 @@
         '<a class="cta" href="' + M.link('shop.html', {}) + '">' + t('home.cta') + '</a>' +
       '</section>' +
 
-      '<section class="sec"><div class="sec-h"><div><h2>' + t('home.pick') + '</h2>' +
-        '<div class="sub">' + t('home.pickSub') + '</div></div>' +
-        '<a class="more" href="' + M.link('shop.html', {}) + '">' + t('home.more') + '</a></div>' +
-        '<div class="grid">' + picks.map(M.pcard).join('') + '</div></section>' +
+      /* 상품이 아직 없는 관이면 빈 칸을 늘어놓지 않고 안내만 보여 줍니다 */
+      (picks.length
+        ? '<section class="sec"><div class="sec-h"><div><h2>' + t('home.pick') + '</h2>' +
+          '<div class="sub">' + t('home.pickSub') + '</div></div>' +
+          '<a class="more" href="' + M.link('shop.html', {}) + '">' + t('home.more') + '</a></div>' +
+          '<div class="grid">' + picks.map(M.pcard).join('') + '</div></section>'
+        : '') +
 
-      '<section class="sec"><div class="sec-h"><div><h2>' + t('home.brands') + '</h2>' +
-        '<div class="sub">' + t('home.brandsSub') + '</div></div>' +
-        '<a class="more" href="' + M.link('brands.html', {}) + '">' + t('home.more') + '</a></div>' +
-        '<div class="brands">' + brands.map(M.bcard).join('') + '</div></section>' +
+      (brands.length
+        ? '<section class="sec"><div class="sec-h"><div><h2>' + t('home.brands') + '</h2>' +
+          '<div class="sub">' + t('home.brandsSub') + '</div></div>' +
+          '<a class="more" href="' + M.link('brands.html', {}) + '">' + t('home.more') + '</a></div>' +
+          '<div class="brands">' + brands.map(M.bcard).join('') + '</div></section>'
+        : '') +
 
       '<section class="sec"><div class="sec-h"><div><h2>' + t('home.all') + '</h2>' +
         '<div class="sub">' + list.length + ' ' + t('cat.items') + '</div></div></div>' +
-        '<div class="grid">' + list.map(M.pcard).join('') + '</div></section>';
+        (list.length
+          ? '<div class="grid">' + list.map(M.pcard).join('') + '</div>'
+          : '<div class="empty"><div class="big">' + t('home.soon') + '</div>' +
+            '<p style="margin-top:10px;color:var(--muted)">' + t('home.soonSub') + '</p></div>') +
+      '</section>';
   });
 })();
 </script>
