@@ -46,7 +46,8 @@
   function mainHTML(it) {
     if (!it) return M.pimgHTML(p);
     if (it.kind === 'img') {
-      return '<div class="pimg has-img"><img src="' + it.src + '" data-mp="' + it.src + '" alt="' + M.esc(M.nm(p)) + '"></div>';
+      return '<div class="pimg has-img" style="--h:' + M.HUE[p.cat] + '">' +
+        '<img src="' + it.src + '" data-mp="' + it.src + '" data-cat="' + p.cat + '" alt="' + M.esc(M.nm(p)) + '"></div>';
     }
     var v = it.v, em = window.MEDIA.videoEmbedSrc(v);
     if (em) {

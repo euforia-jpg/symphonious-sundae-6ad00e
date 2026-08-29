@@ -285,6 +285,7 @@ function setP(id, field, value) {
     if (!Object.keys(D.p[id]).length) delete D.p[id];
   } else D.p[id][field] = value;
   save();
+  if (field === 'imgs' || field === 'video' || field === 'img') MISS = null;   // 파일 확인을 다시 합니다
 }
 /* 사진 목록: 예전 img 한 장짜리도 함께 셉니다 */
 function photosOf(p) {
@@ -400,6 +401,7 @@ function vHome() {
       kpi('적용 환율', '₩' + f.rate.toLocaleString('ko-KR'), '€1 · 버퍼 ' + Math.round(f.buffer * 100) + '%') +
       kpi('환율 기준일', '<span style="font-size:19px">' + esc(String(f.at).slice(0, 10)) + '</span>', esc(f.source)) +
     '</div>' +
+    (MISS && MISS.length ? missBlock() : '') +
     (rows.length
       ? '<div class="panel"><h3>지금 손볼 것</h3><ul class="check">' + rows.map(function (r) {
           return '<li><span class="pill ' + (r[1].length > 5 ? 'bad' : 'warn') + '">' + r[1].length + '</span>' +
@@ -503,6 +505,8 @@ function vMedia() {
         '<div class="n" id="mStatB">' + window.MEDIA.fmtBytes(MSTAT.bytes) + '</div></div>' +
     '</div>' +
 
+    missBlock() +
+
     '<div class="panel"><h3>어느 상품에 넣을까요</h3>' +
       '<select id="mSel">' + P.map(function (x) {
         var n = photosOf(x).length;
@@ -582,6 +586,59 @@ function videoPreview(v) {
   return '<video controls preload="metadata" src="' + esc(v.src) + '" data-mp="' + esc(v.src) + '"></video>' +
     '<p class="pmeta" style="margin:8px 0 0">' + esc(v.src) + (v.bytes ? ' · ' + window.MEDIA.fmtBytes(v.bytes) : '') + '</p>';
 }
+/* ---------- 사진 파일이 진짜 폴더에 있는지 확인 ----------
+   data.js 는 사진을 가리키는데 파일이 폴더에 없으면 손님 화면에서 그림이 깨집니다.
+   실제로 한 번 불러 보고 없는 것만 추려 줍니다. */
+var MISS = null;                      // null=아직 확인 안 함, [] = 다 있음
+function checkFiles(cb) {
+  var P = merged(), want = [];
+  P.forEach(function (p) {
+    photosOf(p).forEach(function (s) { if (want.indexOf(s) < 0) want.push(s); });
+    if (p.video && p.video.kind === 'file' && p.video.src && want.indexOf(p.video.src) < 0) want.push(p.video.src);
+  });
+  if (!want.length) { MISS = []; cb && cb(MISS); return; }
+  var left = want.length, miss = [];
+  want.forEach(function (path) {
+    fetch(path, { method: 'HEAD', cache: 'no-store' })
+      .then(function (r) { if (!r.ok) miss.push(path); })
+      .catch(function () { miss.push(path); })
+      .then(function () { if (--left === 0) { MISS = miss; cb && cb(miss); } });
+  });
+}
+function missBlock() {
+  if (MISS === null) return '<div class="panel"><p class="hint" style="margin:0" id="missBox">사진 파일이 폴더에 들어 있는지 확인하는 중…</p></div>';
+  if (!MISS.length) return '';
+  return '<div class="panel" style="border-color:color-mix(in srgb,var(--bad) 45%,var(--line))">' +
+    '<h3 style="color:var(--bad)">사진 파일 ' + MISS.length + '개가 폴더에 없습니다</h3>' +
+    '<p class="hint">이 상태로 배포하면 손님 화면에서 그림이 안 나옵니다. ' +
+      '아래 파일을 <span class="mono">mercado-euforia\\assets\\img</span> (영상은 <span class="mono">assets\\video</span>) 폴더에 넣어 주세요.</p>' +
+    '<ul class="check">' + MISS.slice(0, 12).map(function (s) {
+      return '<li><span class="pill bad">없음</span><span class="t"><b class="mono">' + esc(s.split('/').pop()) + '</b>' +
+        '<span class="mono">' + esc(s) + '</span></span></li>';
+    }).join('') + '</ul>' +
+    (MISS.length > 12 ? '<p class="hint">…외 ' + (MISS.length - 12) + '개</p>' : '') +
+    '<div class="row" style="margin-top:12px"><button class="btn primary" id="mDlMiss">없는 파일만 내려받기</button>' +
+    '<button class="btn" id="mRecheck">다시 확인</button></div></div>';
+}
+/* 보관함에 있는 것 중 폴더에 없는 것만 */
+function downloadMissing() {
+  if (!MISS || !MISS.length) return toast('내려받을 것이 없습니다');
+  var i = 0, done = 0, gone = [];
+  (function step() {
+    if (i >= MISS.length) {
+      if (gone.length) toast(done + '개 내려받음 · ' + gone.length + '개는 보관함에도 없습니다');
+      else toast(done + '개 내려받았습니다');
+      return;
+    }
+    var path = MISS[i++];
+    window.MEDIA.get(path).then(function (rec) {
+      if (rec && rec.data) { window.MEDIA.download(rec.data, path.split('/').pop()); done++; }
+      else gone.push(path);
+      setTimeout(step, 350);
+    });
+  })();
+}
+
 function refreshMStat() {
   window.MEDIA.usage().then(function (u) {
     MSTAT = u;
@@ -757,6 +814,7 @@ function vDeploy() {
   var n = Object.keys(D.p).length, a = D.add.length;
   view(
     '<h2 class="sec">반영·배포</h2><p class="sub">여기서 고친 값을 손님 화면에 올리는 마지막 단계입니다.</p>' +
+    missBlock() +
     (dirty()
       ? '<div class="panel"><h3>지금 반영을 기다리는 것</h3><ul class="check">' +
         (n ? '<li><span class="pill warn">' + n + '</span><span class="t"><b>고친 상품</b><span>' + Object.keys(D.p).map(function (id) { var p = merged().filter(function (x) { return String(x.id) === String(id); })[0]; return p ? nm(p) : id; }).join(', ') + '</span></span></li>' : '') +
@@ -805,6 +863,9 @@ function render() {
   paintTabs(); paintBar();
   ({ home: vHome, prod: vProd, media: vMedia, add: vAdd, lang: vLang, fx: vFx, order: vOrder, deploy: vDeploy, set: vSet }[TAB])();
   if (window.MEDIA) window.MEDIA.hydrate(document);
+  if (MISS === null && (TAB === 'media' || TAB === 'deploy' || TAB === 'home')) {
+    checkFiles(function () { if (TAB === 'media' || TAB === 'deploy' || TAB === 'home') render(); });
+  }
   window.scrollTo(0, 0);
 }
 function go(tab) { TAB = tab; try { history.replaceState(null, '', '#' + tab); } catch (e) {} render(); }
@@ -850,6 +911,8 @@ document.addEventListener('click', function (e) {
   /* ----- 사진·영상 ----- */
   if (e.target.closest('#mDrop')) { document.getElementById('mFile').click(); return; }
   if (e.target.id === 'mDlAll') { downloadAllMedia(); return; }
+  if (e.target.id === 'mDlMiss') { downloadMissing(); return; }
+  if (e.target.id === 'mRecheck') { MISS = null; render(); return; }
   if (e.target.id === 'mWipe') {
     if (!confirm('보관함의 미리보기 파일을 모두 지웁니다. 이미 폴더에 넣고 배포하셨다면 지워도 사이트에는 그대로 보입니다. 계속할까요?')) return;
     window.MEDIA.clear().then(function () { render(); toast('보관함을 비웠습니다'); });

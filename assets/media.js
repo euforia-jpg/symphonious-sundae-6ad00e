@@ -71,13 +71,19 @@ function hydrate(root) {
     if (el._mpDone) return;
     el._mpDone = true;
     var path = el.dataset.mp;
+    var giveUp = function () {
+      /* 보관함에도 없습니다. 깨진 그림 대신 색 타일로 되돌립니다. */
+      if (el.tagName === 'VIDEO') { var b = el.closest('.pimg'); if (b) b.remove(); return; }
+      if (window.ME && window.ME.tileFallback) window.ME.tileFallback(el);
+      else { el.removeAttribute('src'); el.style.visibility = 'hidden'; }
+    };
     var swap = function () {
       get(path).then(function (rec) {
-        if (!rec || !rec.data) return;
+        if (!rec || !rec.data) return giveUp();
         if (el.tagName === 'VIDEO') { el.src = rec.data; el.load(); }
         else { el.src = rec.data; }
         el.setAttribute('data-preview', '1');
-      });
+      }).catch(giveUp);
     };
     el.addEventListener('error', swap, { once: true });
     /* 이미 실패한 뒤에 붙었을 수도 있습니다 */

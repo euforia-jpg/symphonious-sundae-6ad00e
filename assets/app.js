@@ -143,15 +143,28 @@ function photos(p) {
   if (p.img && a.indexOf(p.img) < 0) a.unshift(p.img);
   return a;
 }
+/* 사진이 없을 때 보여 주는 분류별 색 타일 */
+function tileInner(cat) {
+  return '<span class="gl"><svg viewBox="0 0 24 24">' + (ICON[cat] || ICON.food) + '</svg></span>';
+}
+/* 사진 파일이 없어졌을 때 깨진 그림 대신 색 타일로 되돌립니다 (media.js 가 부릅니다) */
+function tileFallback(img) {
+  var box = img.closest ? img.closest('.pimg') : null;
+  var cat = img.getAttribute('data-cat') || 'food';
+  if (!box) { img.removeAttribute('src'); img.style.visibility = 'hidden'; return; }
+  box.classList.remove('has-img');
+  box.style.setProperty('--h', HUE[cat] || 32);
+  box.innerHTML = tileInner(cat);
+}
 function pimgHTML(p, extra) {
   var ph = photos(p);
   if (ph.length) {
-    /* data-mp: 파일이 아직 폴더에 없으면 관리자 보관함의 미리보기로 바꿔 끼웁니다 (media.js) */
-    return '<div class="pimg has-img' + (extra || '') + '">' +
-      '<img src="' + ph[0] + '" data-mp="' + ph[0] + '" alt="" loading="lazy"></div>';
+    /* data-mp: 파일이 아직 폴더에 없으면 관리자 보관함의 미리보기로 바꿔 끼웁니다 (media.js).
+       그것도 없으면 색 타일로 되돌립니다 — 손님에게 깨진 그림을 보이지 않습니다. */
+    return '<div class="pimg has-img' + (extra || '') + '" style="--h:' + HUE[p.cat] + '">' +
+      '<img src="' + ph[0] + '" data-mp="' + ph[0] + '" data-cat="' + p.cat + '" alt="" loading="lazy"></div>';
   }
-  return '<div class="pimg' + (extra || '') + '" style="--h:' + HUE[p.cat] + '">' +
-    '<span class="gl"><svg viewBox="0 0 24 24">' + ICON[p.cat] + '</svg></span></div>';
+  return '<div class="pimg' + (extra || '') + '" style="--h:' + HUE[p.cat] + '">' + tileInner(p.cat) + '</div>';
 }
 function priceHTML(p) {
   if (!p.eur) return '<div class="price">' + t('pd.ask') + '</div>';
@@ -337,7 +350,8 @@ window.ME = {
   S: S, t: t, P: P, B: B, CATS: CATS, HUE: HUE, ICON: ICON, MARK: MARK,
   prod: prod, brand: brand, nm: nm, tg: tg, esc: esc, link: link,
   fmt: fmt, fmtAlt: fmtAlt, fmtN: fmtN, unit: unit, fxLine: fxLine, toKRW: toKRW,
-  pcard: pcard, bcard: bcard, pimgHTML: pimgHTML, photos: photos, flag: flag, repaint: paint, halls: halls, boot: boot, toast: toast,
+  pcard: pcard, bcard: bcard, pimgHTML: pimgHTML, photos: photos, tileFallback: tileFallback,
+  flag: flag, repaint: paint, halls: halls, boot: boot, toast: toast,
   cartAdd: cartAdd, cartRemove: cartRemove, cartCount: cartCount,
   subtotal: subtotal, shipFee: shipFee, freeFrom: freeFrom
 };
