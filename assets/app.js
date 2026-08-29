@@ -27,8 +27,8 @@ function t(k) { var o = window.T[k]; return (o && (o[S.lang] || o.en)) || k; }
 function tIn(k, lang) { var o = window.T[k]; return (o && (o[lang] || o.en)) || k; }
 
 /* 관마다 노리는 손님이 다릅니다.
-   Shop Spain = 스페인 상품을 한국 손님에게  -> 한국어 / 원화
-   Shop Korea = 한국 상품을 스페인 손님에게  -> 스페인어 / 유로 */
+   Mediterráneo = 스페인·포르투갈·이탈리아 상품을 한국 손님에게  -> 한국어 / 원화
+   Shop Korea   = 한국 상품을 남유럽 손님에게              -> 스페인어 / 유로 */
 var HALL_DEFAULT = { es: { lang: 'ko', cur: 'KRW' }, kr: { lang: 'es', cur: 'EUR' } };
 
 /* ---------- 돈 ---------- */

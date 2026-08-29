@@ -417,7 +417,7 @@ function vHome() {
   view(
     '<h2 class="sec">요약</h2><p class="sub">' + (D.ts ? '마지막 수정 ' + esc(D.ts) : '아직 수정한 내용이 없습니다') + '</p>' +
     '<div class="cards">' +
-      kpi('전체 상품', P.length, es.length + ' · Shop Spain / ' + (P.length - es.length) + ' · Shop Korea') +
+      kpi('전체 상품', P.length, es.length + ' · Mediterráneo / ' + (P.length - es.length) + ' · Shop Korea') +
       kpi('지금 팔 수 있음', live.length, '가격·용량·재고가 모두 있는 상품', live.length === P.length ? 'ok' : '') +
       kpi('아직 못 파는 것', P.length - live.length, '가격이나 재고가 비어 있습니다', (P.length - live.length) ? 'bad' : 'ok') +
       kpi('브랜드', BASE_B.length, '생산자 수') +
@@ -464,7 +464,7 @@ function vProd() {
     '<div class="panel"><div class="row">' +
       '<input id="fq" placeholder="이름·브랜드·번호로 찾기" style="max-width:230px" value="' + esc(FILT.q) + '">' +
       '<select class="s" id="fhall" style="width:150px"><option value="">전체 관</option>' +
-        '<option value="es"' + (FILT.hall === 'es' ? ' selected' : '') + '>Shop Spain</option>' +
+        '<option value="es"' + (FILT.hall === 'es' ? ' selected' : '') + '>Mediterráneo</option>' +
         '<option value="kr"' + (FILT.hall === 'kr' ? ' selected' : '') + '>Shop Korea</option></select>' +
       '<select class="s" id="fcat" style="width:130px"><option value="">전체 분류</option>' +
         CATS.map(function (c) { return '<option value="' + c + '"' + (FILT.cat === c ? ' selected' : '') + '>' + CATNAME[c] + '</option>'; }).join('') + '</select>' +
@@ -777,8 +777,8 @@ function vEdit() {
 
     '<div class="panel"><h3>기본</h3><div class="grid2">' +
       '<label class="fld"><span>관</span><select id="e_hall">' +
-        '<option value="es"' + (p.hall === 'es' ? ' selected' : '') + '>Shop Spain (스페인 → 한국)</option>' +
-        '<option value="kr"' + (p.hall === 'kr' ? ' selected' : '') + '>Shop Korea (한국 → 스페인)</option></select></label>' +
+        '<option value="es"' + (p.hall === 'es' ? ' selected' : '') + '>Mediterráneo (스페인·포르투갈·이탈리아 → 한국)</option>' +
+        '<option value="kr"' + (p.hall === 'kr' ? ' selected' : '') + '>Shop Korea (한국 → 남유럽)</option></select></label>' +
       '<label class="fld"><span>분류</span><select id="e_cat">' + CATS.map(function (c) {
         return '<option value="' + c + '"' + (p.cat === c ? ' selected' : '') + '>' + CATNAME[c] + '</option>'; }).join('') + '</select></label>' +
       '<label class="fld"><span>브랜드(생산자)</span><select id="e_brand">' + BASE_B.map(function (b) {

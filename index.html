@@ -41,12 +41,30 @@
 
     document.getElementById('main').innerHTML =
       M.halls() +
-      '<section class="hero">' +
-        '<div class="tag">' + t(es ? 'home.tagES' : 'home.tagKR') + '</div>' +
-        '<h1>' + t(es ? 'home.titleES' : 'home.titleKR').replace(/\n/g, '<br>') + '</h1>' +
-        '<p>' + t(es ? 'home.subES' : 'home.subKR') + '</p>' +
-        '<a class="cta" href="' + M.link('shop.html', {}) + '">' + t('home.cta') + '</a>' +
-      '</section>' +
+      (function () {
+        /* 글자가 순서대로 올라옵니다. --d 는 그 순서(지연)입니다.
+           지연을 animation-delay 로 따로 쓰면 빛 효과와 부딪히므로 변수로 넘깁니다. */
+        var d = 30;
+        var step = function () { d += 90; return '--d:' + d + 'ms'; };
+        var title = t(es ? 'home.titleES' : 'home.titleKR').split('\n').map(function (line) {
+          return '<span class="ln"><span class="rise sheen" style="' + step() + '">' + M.esc(line) + '</span></span>';
+        }).join('');
+        return '<section class="hero">' +
+          '<div class="blobs"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>' +
+          '<div class="grain"></div>' +
+          '<div class="tag rise" style="' + step() + '">' + t(es ? 'home.tagES' : 'home.tagKR') + '</div>' +
+          '<div class="rule rise" style="' + step() + '"></div>' +
+          '<h1>' + title + '</h1>' +
+          '<p class="rise" style="' + step() + '">' + t(es ? 'home.subES' : 'home.subKR') + '</p>' +
+          '<a class="cta rise" href="' + M.link('shop.html', {}) + '" style="' + step() + '">' + t('home.cta') +
+            '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>' +
+          '<div class="route rise" style="' + step() + '">' +
+            '<span>' + t(es ? 'home.rFromES' : 'home.rFromKR') + '</span><span class="ln2"></span>' +
+            '<svg class="pl" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15.5v-2l-8-4.5V3.7a1.7 1.7 0 0 0-3.4 0V9l-8 4.5v2l8-2.4v4.6l-2.4 1.6V21l4.1-1.1L15.3 21v-1.7L12.9 17.7V13.1z"/></svg>' +
+            '<span class="ln2"></span><span>' + t(es ? 'home.rToES' : 'home.rToKR') + '</span>' +
+          '</div>' +
+        '</section>';
+      })() +
 
       /* 상품이 아직 없는 관이면 빈 칸을 늘어놓지 않고 안내만 보여 줍니다 */
       (picks.length

@@ -11,17 +11,24 @@ window.T = {
 'nav.brands':{ko:'생산자',es:'Productores',en:'Makers',fr:'Producteurs',de:'Hersteller',it:'Produttori',zh:'品牌'},
 'nav.cart':{ko:'장바구니',es:'Cesta',en:'Cart',fr:'Panier',de:'Warenkorb',it:'Carrello',zh:'购物车'},
 
-'hall.esName':{ko:'Shop Spain',es:'Shop Spain',en:'Shop Spain',fr:'Shop Spain',de:'Shop Spain',it:'Shop Spain',zh:'西班牙馆'},
-'hall.esSub':{ko:'100% 유럽 생산',es:'100 % producido en Europa',en:'100% made in Europe',fr:'100 % fabriqué en Europe',de:'100 % in Europa gefertigt',it:'100% prodotto in Europa',zh:'100% 欧洲生产'},
+'hall.esName':{ko:'Mediterráneo',es:'Mediterráneo',en:'Mediterráneo',fr:'Mediterráneo',de:'Mediterráneo',it:'Mediterráneo',zh:'地中海馆'},
+'hall.esSub':{ko:'스페인 · 포르투갈 · 이탈리아',es:'España · Portugal · Italia',en:'Spain · Portugal · Italy',fr:'Espagne · Portugal · Italie',de:'Spanien · Portugal · Italien',it:'Spagna · Portogallo · Italia',zh:'西班牙 · 葡萄牙 · 意大利'},
 'hall.krName':{ko:'Shop Korea',es:'Shop Korea',en:'Shop Korea',fr:'Shop Korea',de:'Shop Korea',it:'Shop Korea',zh:'韩国馆'},
 'hall.krSub':{ko:'한국 정품 직배송',es:'Auténtico, directo de Corea',en:'Authentic, direct from Korea',fr:'Authentique, direct de Corée',de:'Original, direkt aus Korea',it:'Autentico, diretto dalla Corea',zh:'韩国正品直发'},
 
-'home.tagES':{ko:'안달루시아에서',es:'Desde Andalucía',en:'From Andalusia',fr:'D’Andalousie',de:'Aus Andalusien',it:'Dall’Andalusia',zh:'来自安达卢西亚'},
-'home.titleES':{ko:'스페인 밖으로\n수출되지 않던 것들',es:'Lo que nunca\nsalió de España',en:'What never left\nSpain',fr:'Ce qui n’a jamais\nquitté l’Espagne',de:'Was Spanien nie\nverlassen hat',it:'Ciò che non ha mai\nlasciato la Spagna',zh:'从未出口过的\n西班牙好物'},
-'home.subES':{ko:'대형 유통에 들어가지 않는 소규모 생산자들',es:'Pequeños productores fuera de la gran distribución',en:'Small producers you won’t find in supermarkets',fr:'De petits producteurs hors grande distribution',de:'Kleine Erzeuger abseits des Handels',it:'Piccoli produttori fuori dalla grande distribuzione',zh:'不进大型流通渠道的小生产者'},
-'home.tagKR':{ko:'서울에서',es:'Desde Seúl',en:'From Seoul',fr:'De Séoul',de:'Aus Seoul',it:'Da Seoul',zh:'来自首尔'},
+/* 첫 화면. 눈썹글씨는 같은 한 단어를 스페인어·이탈리아어·포르투갈어로 나란히 적은
+   브랜드 장치라, 어느 언어로 보든 그대로 둡니다. */
+'home.tagES':{ko:'ARTESANO · ARTIGIANO · ARTESÃO',es:'ARTESANO · ARTIGIANO · ARTESÃO',en:'ARTESANO · ARTIGIANO · ARTESÃO',fr:'ARTESANO · ARTIGIANO · ARTESÃO',de:'ARTESANO · ARTIGIANO · ARTESÃO',it:'ARTESANO · ARTIGIANO · ARTESÃO',zh:'ARTESANO · ARTIGIANO · ARTESÃO'},
+'home.titleES':{ko:'이름을 걸고\n만든 것만',es:'Solo lo que se firma\ncon el propio nombre',en:'Only what someone\nsigned their name to',fr:'Seulement ce qui porte\nle nom de son auteur',de:'Nur was jemand mit\nseinem Namen zeichnet',it:'Solo ciò che porta\nil nome di chi lo fa',zh:'只做敢署上\n自己名字的东西'},
+'home.subES':{ko:'만든 사람과 만든 곳을 확인한 것만 들입니다. 스페인·포르투갈·이탈리아에서 한국까지, 중간 없이 항공으로.',es:'Solo entra lo que sabemos quién y dónde se hizo. De España, Portugal e Italia a Corea, sin intermediarios y por vía aérea.',en:'We stock only what we can trace to a maker and a place. From Spain, Portugal and Italy to Korea — no middlemen, flown direct.',fr:'Nous ne prenons que ce dont nous connaissons l’auteur et le lieu. D’Espagne, du Portugal et d’Italie vers la Corée, sans intermédiaire et par avion.',de:'Wir führen nur, wovon wir Hersteller und Ort kennen. Aus Spanien, Portugal und Italien nach Korea — ohne Zwischenhandel, per Luftfracht.',it:'Prendiamo solo ciò di cui conosciamo autore e luogo. Da Spagna, Portogallo e Italia alla Corea, senza intermediari e per via aerea.',zh:'只收得清楚是谁、在哪里做的。自西班牙、葡萄牙、意大利直送韩国，不经中间商，空运直达。'},
+'home.tagKR':{ko:'AUTÉNTICO · AUTENTICO · AUTÊNTICO',es:'AUTÉNTICO · AUTENTICO · AUTÊNTICO',en:'AUTÉNTICO · AUTENTICO · AUTÊNTICO',fr:'AUTÉNTICO · AUTENTICO · AUTÊNTICO',de:'AUTÉNTICO · AUTENTICO · AUTÊNTICO',it:'AUTÉNTICO · AUTENTICO · AUTÊNTICO',zh:'AUTÉNTICO · AUTENTICO · AUTÊNTICO'},
 'home.titleKR':{ko:'한국에서 실제로\n쓰는 것들만',es:'Solo lo que en\nCorea se usa de verdad',en:'Only what Korea\nactually uses',fr:'Seulement ce qu’on\nutilise vraiment en Corée',de:'Nur was Korea\nwirklich benutzt',it:'Solo ciò che in\nCorea si usa davvero',zh:'只选韩国人\n真正在用的'},
-'home.subKR':{ko:'관광 상품이 아닌, 한국 가정의 물건',es:'Nada de souvenirs: objetos de casas coreanas',en:'No souvenirs — things from Korean homes',fr:'Pas de souvenirs : des objets du quotidien coréen',de:'Keine Souvenirs — Dinge aus koreanischen Haushalten',it:'Niente souvenir: oggetti delle case coreane',zh:'不是纪念品，是韩国家庭的日常'},
+'home.subKR':{ko:'관광 상품이 아닌, 한국 가정의 물건. 한국에서 남유럽까지 항공으로 보내 드립니다.',es:'Nada de souvenirs: objetos de casas coreanas. De Corea al sur de Europa por vía aérea.',en:'No souvenirs — things from Korean homes. Flown from Korea to Southern Europe.',fr:'Pas de souvenirs : des objets du quotidien coréen. De la Corée vers l’Europe du Sud, par avion.',de:'Keine Souvenirs — Dinge aus koreanischen Haushalten. Von Korea nach Südeuropa per Luftfracht.',it:'Niente souvenir: oggetti delle case coreane. Dalla Corea al Sud Europa per via aerea.',zh:'不是纪念品，是韩国家庭的日常。自韩国空运直送南欧。'},
+/* 항공 노선 표시 */
+'home.rFromES':{ko:'남유럽',es:'Sur de Europa',en:'Southern Europe',fr:'Europe du Sud',de:'Südeuropa',it:'Sud Europa',zh:'南欧'},
+'home.rToES':{ko:'한국 · 항공 직송',es:'Corea · vía aérea',en:'Korea · by air',fr:'Corée · par avion',de:'Korea · per Luftfracht',it:'Corea · via aerea',zh:'韩国 · 空运直送'},
+'home.rFromKR':{ko:'한국',es:'Corea',en:'Korea',fr:'Corée',de:'Korea',it:'Corea',zh:'韩国'},
+'home.rToKR':{ko:'남유럽 · 항공 직송',es:'Sur de Europa · vía aérea',en:'Southern Europe · by air',fr:'Europe du Sud · par avion',de:'Südeuropa · per Luftfracht',it:'Sud Europa · via aerea',zh:'南欧 · 空运直送'},
 'home.cta':{ko:'셀렉션 보기',es:'Ver la selección',en:'See the selection',fr:'Voir la sélection',de:'Zur Auswahl',it:'Vedi la selezione',zh:'查看精选'},
 'home.pick':{ko:'이번 주 셀렉션',es:'Selección de la semana',en:'This week’s picks',fr:'Sélection de la semaine',de:'Auswahl der Woche',it:'Selezione della settimana',zh:'本周精选'},
 'home.pickSub':{ko:'바이어가 직접 고른 상품',es:'Elegido por nuestros compradores',en:'Chosen by our buyers',fr:'Choisi par nos acheteurs',de:'Von unseren Einkäufern gewählt',it:'Scelto dai nostri buyer',zh:'由买手亲选'},

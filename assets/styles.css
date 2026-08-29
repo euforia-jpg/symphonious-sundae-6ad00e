@@ -5,7 +5,7 @@
   --ink:#171A2B; --ink2:#3A3D50; --muted:#6B6E82;
   --line:#E3DFD6; --line2:#EFEBE3;
 
-  --cobalt:#1E4FD8;   /* Shop Spain */
+  --cobalt:#1E4FD8;   /* Mediterráneo */
   --jade:#0F7A6C;     /* Shop Korea */
   --pom:#D6265A;      /* 포인트 */
   --saffron:#E09312;
@@ -136,18 +136,72 @@ input,select,textarea{font:inherit; color:inherit}
 .hall[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
 
 /* ---------- 히어로 ---------- */
+/* ---------- 첫 화면 (Artesano) ----------
+   색 덩어리 세 개가 44~58초 주기로 아주 느리게 흐릅니다.
+   그 위에 아주 옅은 입자를 얹어 인쇄물 같은 질감을 냅니다. */
 .hero{
-  margin-top:16px;border-radius:var(--r-l);padding:44px 36px;color:#fff;position:relative;overflow:hidden;
-  background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 72%,var(--pom)));
+  margin-top:16px;border-radius:var(--r-l);color:#F3E9D8;position:relative;overflow:hidden;isolation:isolate;
+  padding:clamp(44px,6vw,84px) clamp(24px,4.5vw,58px);min-height:330px;
+  display:flex;flex-direction:column;justify-content:center;
+  background:#140E14;border:1px solid rgba(214,180,110,.16);
 }
-.hero::after{content:"";position:absolute;inset:0;opacity:.2;pointer-events:none;
-  background-image:linear-gradient(to right,rgba(255,255,255,.55) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.55) 1px,transparent 1px);
-  background-size:44px 44px}
+.hero .blobs{position:absolute;inset:-30%;z-index:-2;filter:blur(58px)}
+.hero .blob{position:absolute;border-radius:50%;mix-blend-mode:screen;opacity:.85}
+.hero .b1{width:70%;padding-bottom:70%;left:-14%;top:-22%;background:#7A1E33;animation:hb1 44s ease-in-out infinite alternate}
+.hero .b2{width:50%;padding-bottom:50%;right:-4%;top:6%;background:#A9852F;animation:hb2 52s ease-in-out infinite alternate}
+.hero .b3{width:58%;padding-bottom:58%;left:34%;bottom:-34%;background:#3E5233;animation:hb3 58s ease-in-out infinite alternate}
+@keyframes hb1{to{transform:translate(18%,12%) scale(1.15)}}
+@keyframes hb2{to{transform:translate(-14%,18%) scale(1.24)}}
+@keyframes hb3{to{transform:translate(10%,-16%) scale(.88)}}
+/* Shop Korea 관은 같은 짜임에 색만 바꿉니다 */
+[data-hall="kr"] .hero .b1{background:#12463C}
+[data-hall="kr"] .hero .b2{background:#9A8A3A}
+[data-hall="kr"] .hero .b3{background:#243F52}
+.hero .grain{position:absolute;inset:0;z-index:-1;opacity:.13;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.5'/%3E%3C/svg%3E")}
 .hero>*{position:relative}
-.hero .tag{font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;opacity:.92}
-.hero h1{font-size:clamp(30px,4.6vw,50px);margin-top:10px;letter-spacing:-.035em}
-.hero p{margin-top:12px;font-size:16px;opacity:.94;max-width:44ch}
-.hero .cta{display:inline-block;margin-top:22px;background:#fff;color:#171A2B;font-weight:700;font-size:14px;padding:11px 22px;border-radius:999px}
+.hero .tag{font-size:clamp(10px,1vw,11.5px);font-weight:700;letter-spacing:.3em;text-transform:uppercase;color:#DFC07A}
+.hero .rule{width:44px;height:1px;background:rgba(223,192,122,.6);margin-top:20px}
+.hero h1{margin-top:16px;font-weight:600;letter-spacing:-.035em;line-height:1.08;
+  font-size:clamp(28px,5.2vw,56px);max-width:15ch;color:#FBF6EC}
+.hero h1 .ln{display:block;overflow:hidden}
+.hero p{margin-top:18px;font-size:clamp(14px,1.25vw,15.5px);line-height:1.65;max-width:42ch;opacity:.84;font-weight:300}
+.hero .cta{display:inline-flex;align-items:center;gap:9px;margin-top:clamp(22px,3vw,30px);align-self:flex-start;
+  font-size:13.5px;font-weight:700;letter-spacing:-.01em;padding:13px 24px;border-radius:999px;
+  background:transparent;color:#F0E4CC;border:1px solid rgba(223,192,122,.55);transition:.18s}
+.hero .cta:hover{background:rgba(223,192,122,.13)}
+.hero .cta svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .18s}
+.hero .cta:hover svg{transform:translateX(3px)}
+
+/* 항공 노선 */
+.hero .route{display:flex;align-items:center;gap:10px;margin-top:clamp(20px,2.6vw,28px);
+  font-size:10.5px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;opacity:.72;white-space:nowrap}
+.hero .route .ln2{flex:0 0 46px;height:1px;background:currentColor;opacity:.45}
+.hero .route .pl{width:15px;height:15px;flex:none;fill:currentColor;animation:fly 7s ease-in-out infinite}
+@keyframes fly{0%,100%{transform:translateX(-2px)}50%{transform:translateX(3px)}}
+@media(max-width:680px){
+  .hero .route{font-size:9.5px;letter-spacing:.12em;gap:8px}
+  .hero .route .ln2{flex:0 0 26px}
+}
+
+/* 글자 등장 + 제목 위를 지나는 빛.
+   두 효과를 각각 다른 class 의 animation 축약형으로 쓰면 뒤엣것이 앞엣것을 통째로
+   덮어써서 글자가 안 보입니다. 겹치는 줄은 반드시 한 줄에 함께 적습니다. */
+.rise{display:inline-block;opacity:0;transform:translateY(.5em);
+  animation:rise .85s cubic-bezier(.22,.7,.25,1) var(--d,0ms) forwards}
+@keyframes rise{to{opacity:1;transform:none}}
+.hero .route.rise{display:flex}   /* .rise 의 inline-block 이 가로 배치를 깨뜨립니다 */
+.sheen{background-image:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.85) 50%,transparent 62%);
+  background-size:280% 100%;background-position:180% 0;-webkit-background-clip:text;background-clip:text}
+.rise.sheen{animation:rise .85s cubic-bezier(.22,.7,.25,1) var(--d,0ms) forwards,
+                      sheen 4.6s ease-in-out calc(var(--d,0ms) + 1.4s) infinite}
+@keyframes sheen{0%{background-position:180% 0}45%,100%{background-position:-90% 0}}
+
+@media (prefers-reduced-motion: reduce){
+  .hero .blob,.hero .route .pl{animation:none!important}
+  .rise{animation:none!important;opacity:1;transform:none}
+  .rise.sheen{-webkit-background-clip:initial;background-clip:initial;background-image:none}
+}
 
 /* ---------- 섹션 ---------- */
 .sec{padding:44px 0 0}

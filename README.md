@@ -40,7 +40,7 @@ assets/app.js       공통 동작 (언어 · 통화 · 장바구니)
 
 **색 바꾸기** — `assets/styles.css` 맨 위
 ```
---cobalt:#1E4FD8;   /* Shop Spain */
+--cobalt:#1E4FD8;   /* Mediterráneo */
 --jade:#0F7A6C;     /* Shop Korea */
 --pom:#D6265A;      /* 포인트 */
 ```
@@ -57,7 +57,7 @@ window.FX = { base: 1614.20, buffer: 0.03, at: "2026-08-27 09:00", source: "하�
  name:{ko:"...",es:"...",en:"...",fr:"...",de:"...",it:"...",zh:"..."},
  tag: {ko:"...",es:"...",en:"...",fr:"...",de:"...",it:"...",zh:"..."}},
 ```
-`hall` 은 `es`(Shop Spain) 또는 `kr`(Shop Korea),
+`hall` 은 `es`(Mediterráneo — 스페인·포르투갈·이탈리아) 또는 `kr`(Shop Korea),
 `cat` 은 `food · wine · craft · home · fashion · beauty` 중 하나입니다.
 
 ## 아직 없는 것
