@@ -52,6 +52,8 @@ window.T = {
 'pd.sealKR':{ko:'한국 정품 직배송',es:'Auténtico, directo de Corea',en:'Authentic, direct from Korea',fr:'Authentique, direct de Corée',de:'Original, direkt aus Korea',it:'Autentico, diretto dalla Corea',zh:'韩国正品直发'},
 'pd.sealKRsub':{ko:'한국 현지에서 바로 발송합니다.',es:'Se envía directamente desde Corea.',en:'Ships directly from Korea.',fr:'Expédié directement de Corée.',de:'Versand direkt aus Korea.',it:'Spedito direttamente dalla Corea.',zh:'自韩国本土直接发货。'},
 'pd.about':{ko:'상품 설명',es:'Descripción',en:'About this product',fr:'Description',de:'Produktbeschreibung',it:'Descrizione',zh:'商品说明'},
+'pd.photo':{ko:'사진',es:'Foto',en:'Photo',fr:'Photo',de:'Foto',it:'Foto',zh:'照片'},
+'pd.video':{ko:'영상',es:'Vídeo',en:'Video',fr:'Vidéo',de:'Video',it:'Video',zh:'视频'},
 'pd.dop':{ko:'원산지 보호 명칭',es:'Denominación de Origen Protegida',en:'Protected Designation of Origin',fr:'Appellation d’origine protégée',de:'Geschützte Ursprungsbezeichnung',it:'Denominazione di Origine Protetta',zh:'原产地保护标志'},
 'pd.allergen':{ko:'알레르기 정보',es:'Alérgenos',en:'Allergens',fr:'Allergènes',de:'Allergene',it:'Allergeni',zh:'过敏原'},
 'al.sulfites':{ko:'아황산류 함유',es:'Contiene sulfitos',en:'Contains sulphites',fr:'Contient des sulfites',de:'Enthält Sulfite',it:'Contiene solfiti',zh:'含亚硫酸盐'},

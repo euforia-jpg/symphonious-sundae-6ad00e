@@ -25,6 +25,7 @@
 
 <script src="assets/i18n.js"></script>
 <script src="assets/data.js"></script>
+<script src="assets/media.js"></script>
 <script src="assets/app.js"></script>
 <script>
 (function () {
@@ -32,6 +33,49 @@
   var id = new URLSearchParams(location.search).get('id');
   var p = M.prod(id);
   var qty = 1;
+  var mIx = 0;                 // 지금 크게 보고 있는 사진·영상 번호
+
+  /* 사진 여러 장 + 영상 하나를 한 줄로 세워 둡니다. */
+  function mediaList() {
+    var out = M.photos(p).map(function (src) { return { kind: 'img', src: src }; });
+    var MD = window.MEDIA;
+    var v = MD && p.video && (p.video.kind ? p.video : MD.parseVideo(p.video));
+    if (v) out.push({ kind: 'video', v: v });
+    return out;
+  }
+  function mainHTML(it) {
+    if (!it) return M.pimgHTML(p);
+    if (it.kind === 'img') {
+      return '<div class="pimg has-img"><img src="' + it.src + '" data-mp="' + it.src + '" alt="' + M.esc(M.nm(p)) + '"></div>';
+    }
+    var v = it.v, em = window.MEDIA.videoEmbedSrc(v);
+    if (em) {
+      return '<div class="pimg is-video"><iframe src="' + em + '" title="' + M.esc(M.nm(p)) + '" ' +
+        'allow="accelerometer; autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share" ' +
+        'allowfullscreen loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe></div>';
+    }
+    return '<div class="pimg is-video"><video controls playsinline preload="metadata" ' +
+      'src="' + M.esc(v.src) + '" data-mp="' + M.esc(v.src) + '"></video></div>';
+  }
+  function galHTML() {
+    var list = mediaList();
+    if (mIx >= list.length) mIx = 0;
+    if (list.length < 2) return mainHTML(list[0]);
+    return '<div class="gal">' + mainHTML(list[mIx]) +
+      '<div class="gal-thumbs">' + list.map(function (it, i) {
+        var inner;
+        if (it.kind === 'img') {
+          inner = '<img src="' + it.src + '" data-mp="' + it.src + '" alt="" loading="lazy">';
+        } else {
+          var th = window.MEDIA.videoThumb(it.v);
+          inner = (th ? '<img src="' + th + '" alt="" loading="lazy">' : '<span class="vbg"></span>') +
+            '<span class="play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></span>';
+        }
+        return '<button type="button" class="gth' + (i === mIx ? ' on' : '') + '" data-m="' + i + '" ' +
+          'aria-label="' + (it.kind === 'video' ? t('pd.video') : t('pd.photo') + ' ' + (i + 1)) + '" ' +
+          'aria-pressed="' + (i === mIx) + '">' + inner + '</button>';
+      }).join('') + '</div></div>';
+  }
 
   function draw() {
     var main = document.getElementById('main');
@@ -46,7 +90,7 @@
 
     main.innerHTML =
       '<div class="pd">' +
-        M.pimgHTML(p) +
+        galHTML() +
         '<div>' +
           '<a class="maker" href="' + M.link('brand.html', { id: b.id }) + '">' + M.esc(b.name) + ' · ' + M.esc(b.loc) + ' →</a>' +
           '<h1>' + M.esc(M.nm(p)) + '</h1>' +
@@ -101,6 +145,8 @@
   M.boot('product.html', draw);
 
   document.addEventListener('click', function (e) {
+    var mt = e.target.closest('[data-m]');
+    if (mt) { mIx = +mt.dataset.m; draw(); if (window.MEDIA) window.MEDIA.hydrate(document); return; }
     var q = e.target.closest('[data-q]');
     if (q) { qty = Math.max(1, qty + (+q.dataset.q)); document.getElementById('qn').textContent = qty; return; }
     if (e.target.closest('#addBtn')) { M.cartAdd(p.id, qty); M.toast(t('pd.added')); }

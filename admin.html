@@ -138,6 +138,26 @@ ul.check .t span{color:var(--muted);font-size:12.5px}
 .lg{text-align:center;font-size:10.5px;font-weight:700;padding:3px 0;border-radius:5px;
   background:color-mix(in srgb,var(--ok) 13%,transparent);color:var(--ok)}
 .lg.miss{background:color-mix(in srgb,var(--bad) 12%,transparent);color:var(--bad)}
+/* ---- 사진·영상 ---- */
+.drop{border:2px dashed var(--line);border-radius:13px;padding:26px 18px;text-align:center;cursor:pointer;
+  display:grid;gap:5px;justify-items:center;transition:.15s;background:var(--bg)}
+.drop:hover,.drop:focus-visible,.drop.over{border-color:var(--cobalt);background:color-mix(in srgb,var(--cobalt) 5%,var(--bg));outline:none}
+.drop svg{width:26px;height:26px;fill:none;stroke:var(--cobalt);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.drop b{font-size:14px}
+.drop span{font-size:12px;color:var(--muted)}
+.shots{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px;margin-top:16px}
+.shot{margin:0;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--bg);position:relative}
+.shot.main{border-color:var(--cobalt);box-shadow:0 0 0 2px color-mix(in srgb,var(--cobalt) 20%,transparent)}
+.shot img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:var(--line2)}
+.shot figcaption{padding:6px 8px 0;font-size:11px;color:var(--muted);word-break:break-all}
+.shot-b{display:flex;gap:4px;padding:7px 8px 8px}
+.shot-b .btn{flex:1;padding:4px 0;font-size:11.5px}
+.shot img[data-preview]{outline:2px dashed color-mix(in srgb,var(--warn) 60%,transparent);outline-offset:-2px}
+.shot img[data-preview]+.mainbadge{background:var(--warn)}
+.mainbadge{position:absolute;top:7px;left:7px;background:var(--cobalt);color:#fff;font-size:10.5px;font-weight:700;
+  padding:2.5px 7px;border-radius:999px}
+.vprev{margin-top:14px;max-width:520px}
+.vprev iframe,.vprev video{width:100%;aspect-ratio:16/9;border:0;border-radius:11px;background:#0C0E16;display:block}
 .toast{position:fixed;left:50%;bottom:86px;transform:translate(-50%,14px);z-index:60;
   background:var(--ink);color:var(--bg);padding:10px 17px;border-radius:10px;font-size:13.5px;font-weight:600;
   opacity:0;pointer-events:none;transition:.22s}
@@ -196,6 +216,7 @@ ul.check .t span{color:var(--muted);font-size:12.5px}
 
 <script src="assets/i18n.js"></script>
 <script src="assets/data.js"></script>
+<script src="assets/media.js"></script>
 <script>
 (function () {
 'use strict';
@@ -248,6 +269,29 @@ function fxNow() {
            rate: Math.round(+f.base * (1 + +f.buffer) * 10) / 10 };
 }
 function brand(id) { for (var i = 0; i < BASE_B.length; i++) if (BASE_B[i].id === id) return BASE_B[i]; return null; }
+function baseById(id) { for (var i = 0; i < BASE_P.length; i++) if (String(BASE_P[i].id) === String(id)) return BASE_P[i]; return null; }
+function getP(id) { var a = merged(); for (var i = 0; i < a.length; i++) if (String(a[i].id) === String(id)) return a[i]; return null; }
+function same(a, b) { return JSON.stringify(a === undefined ? null : a) === JSON.stringify(b === undefined ? null : b); }
+
+/* 값 하나를 고쳐 둡니다. 원래 값과 같아지면 "고친 것" 목록에서 빼 줍니다. */
+function setP(id, field, value) {
+  var addP = D.add.filter(function (p) { return String(p.id) === String(id); })[0];
+  if (addP) { addP[field] = value; save(); return; }
+  var base = baseById(id);
+  if (!base) return;
+  if (!D.p[id]) D.p[id] = {};
+  if (same(base[field], value)) {
+    delete D.p[id][field];
+    if (!Object.keys(D.p[id]).length) delete D.p[id];
+  } else D.p[id][field] = value;
+  save();
+}
+/* 사진 목록: 예전 img 한 장짜리도 함께 셉니다 */
+function photosOf(p) {
+  var a = (p.imgs && p.imgs.length) ? p.imgs.slice() : [];
+  if (p.img && a.indexOf(p.img) < 0) a.unshift(p.img);
+  return a;
+}
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 function nm(p) { return p.name && (p.name.ko || p.name.en) || '(이름 없음)'; }
 function krw(eur) { return Math.round(eur * fxNow().rate / 10) * 10; }
@@ -274,7 +318,7 @@ function issues(p) {                       // 막는 것
 }
 function softs(p) {                        // 아쉬운 것
   var out = [];
-  if (!p.img) out.push('사진 없음');
+  if (!photosOf(p).length) out.push('사진 없음');
   var miss = missLangs(p);
   if (miss.length) out.push('번역 ' + miss.length + '개어 빠짐');
   return out;
@@ -293,6 +337,7 @@ function ready(p) { return issues(p).length === 0; }
 var TABS = [
   ['home',  '요약'],
   ['prod',  '상품'],
+  ['media', '사진·영상'],
   ['add',   '상품 추가'],
   ['lang',  '번역'],
   ['fx',    '환율'],
@@ -435,6 +480,165 @@ function rowHTML(p) {
       (iss.length || softs(p).length ? '' : '<span class="pill ok">완료</span>') + '</td>' +
     '<td><a class="btn sm" href="product.html?id=' + encodeURIComponent(p.id) + '" target="_blank" rel="noopener">보기</a></td>' +
   '</tr>';
+}
+
+/* ---------- 사진·영상 ---------- */
+var MSEL = null;                     // 지금 고른 상품 번호
+var MSTAT = { count: 0, bytes: 0 };  // 보관함 현황
+
+function vMedia() {
+  var P = merged();
+  if (MSEL == null || !getP(MSEL)) MSEL = P[0] && P[0].id;
+  var p = getP(MSEL);
+  var noPhoto = P.filter(function (x) { return !photosOf(x).length; }).length;
+  var withVideo = P.filter(function (x) { return x.video; }).length;
+
+  view(
+    '<h2 class="sec">사진·영상</h2><p class="sub">사진은 고르기만 하면 알아서 줄여서 넣습니다. 영상은 유튜브 주소를 붙여넣는 방식을 권합니다.</p>' +
+    '<div class="cards">' +
+      '<div class="kpi"><div class="k">사진 있는 상품</div><div class="v">' + (P.length - noPhoto) +
+        '<span style="font-size:14px;color:var(--muted)"> / ' + P.length + '</span></div><div class="n">' + noPhoto + '개 남음</div></div>' +
+      '<div class="kpi"><div class="k">영상 있는 상품</div><div class="v">' + withVideo + '</div><div class="n">유튜브·비메오·직접 파일</div></div>' +
+      '<div class="kpi"><div class="k">아직 안 내려받은 파일</div><div class="v" id="mStatN">' + MSTAT.count + '</div>' +
+        '<div class="n" id="mStatB">' + window.MEDIA.fmtBytes(MSTAT.bytes) + '</div></div>' +
+    '</div>' +
+
+    '<div class="panel"><h3>어느 상품에 넣을까요</h3>' +
+      '<select id="mSel">' + P.map(function (x) {
+        var n = photosOf(x).length;
+        return '<option value="' + esc(x.id) + '"' + (String(x.id) === String(MSEL) ? ' selected' : '') + '>' +
+          esc(x.id) + '. ' + esc(nm(x)) + '  —  사진 ' + n + '장' + (x.video ? ' · 영상 있음' : '') + '</option>';
+      }).join('') + '</select></div>' +
+
+    (p ? mediaPanel(p) : '') +
+
+    '<div class="panel"><h3>올린 파일을 사이트에 넣는 법</h3>' +
+      '<ul class="check">' +
+      '<li><span class="pill es">1</span><span class="t"><b>여기서 사진·영상을 고릅니다</b><span>고르는 즉시 대표님 화면의 가게에는 그대로 보입니다. 손님에게는 아직 안 보입니다.</span></span></li>' +
+      '<li><span class="pill es">2</span><span class="t"><b>[파일 내려받기]</b><span>줄여 놓은 사진 파일이 이름까지 맞춰서 내려받아집니다.</span></span></li>' +
+      '<li><span class="pill es">3</span><span class="t"><b>폴더에 넣습니다</b><span>사진은 <span class="mono">mercado-euforia\\assets\\img</span>, 영상 파일은 <span class="mono">assets\\video</span> 폴더에 넣습니다. 폴더가 없으면 만드세요.</span></span></li>' +
+      '<li><span class="pill es">4</span><span class="t"><b>data.js 내보내고 배포</b><span>[반영·배포] 탭에서 하던 그대로입니다.</span></span></li>' +
+      '</ul>' +
+      '<div class="row" style="margin-top:14px">' +
+        '<button class="btn primary" id="mDlAll">파일 내려받기 (전부)</button>' +
+        '<button class="btn" id="mWipe">보관함 비우기</button>' +
+        '<span class="pmeta">파일을 폴더에 넣고 배포까지 마쳤으면 비워도 됩니다.</span>' +
+      '</div></div>' +
+
+    '<div class="note"><b>남의 사진·영상은 쓰지 마세요.</b> 생산자 홈페이지나 인스타그램의 사진·영상은 그쪽 저작물입니다. ' +
+      '대표님이 직접 찍은 것, 또는 생산자에게 "판매용으로 써도 좋다"는 답을 받은 것만 올리세요. ' +
+      '요청 메일 초안이 필요하시면 말씀해 주세요.</div>' +
+
+    '<div class="note"><b>영상은 유튜브를 권합니다.</b> 영상 파일을 사이트에 직접 올리면 용량이 크고, ' +
+      '손님이 볼 때마다 Netlify 전송량을 씁니다(무료 한도 월 100GB). ' +
+      '유튜브에 <b>일부공개(Unlisted)</b>로 올리고 주소만 붙여넣으면 용량도 안 들고 어디서나 잘 재생됩니다.</div>'
+  );
+  refreshMStat();
+}
+
+function mediaPanel(p) {
+  var ph = photosOf(p);
+  var v = p.video;
+  return '<div class="panel"><h3>사진 — ' + esc(nm(p)) + '</h3>' +
+    '<p class="hint">여러 장을 한꺼번에 고를 수 있습니다. 긴 쪽 1200px, JPEG 로 자동으로 줄입니다. 맨 앞이 대표 사진입니다.</p>' +
+    '<div class="drop" id="mDrop" tabindex="0" role="button">' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>' +
+      '<b>사진을 여기로 끌어다 놓거나 눌러서 고르세요</b>' +
+      '<span>JPG · PNG · HEIC · WEBP  /  여러 장 한꺼번에 가능</span>' +
+    '</div>' +
+    '<input type="file" id="mFile" accept="image/*" multiple hidden>' +
+    '<div id="mBusy" class="pmeta" style="margin-top:10px" hidden></div>' +
+    (ph.length
+      ? '<div class="shots">' + ph.map(function (src, i) {
+          return '<figure class="shot' + (i === 0 ? ' main' : '') + '">' +
+            '<img src="' + esc(src) + '" data-mp="' + esc(src) + '" alt="">' +
+            (i === 0 ? '<span class="mainbadge">대표</span>' : '') +
+            '<figcaption class="mono">' + esc(src.split('/').pop()) + '</figcaption>' +
+            '<div class="shot-b">' +
+              '<button class="btn sm" data-ph="left" data-i="' + i + '"' + (i === 0 ? ' disabled' : '') + ' title="앞으로">←</button>' +
+              '<button class="btn sm" data-ph="right" data-i="' + i + '"' + (i === ph.length - 1 ? ' disabled' : '') + ' title="뒤로">→</button>' +
+              '<button class="btn sm danger" data-ph="del" data-i="' + i + '" title="지우기">지우기</button>' +
+            '</div></figure>';
+        }).join('') + '</div>'
+      : '<p class="hint" style="margin:12px 0 0">아직 사진이 없습니다.</p>') +
+    '</div>' +
+
+    '<div class="panel"><h3>영상 — ' + esc(nm(p)) + '</h3>' +
+      '<label class="fld"><span>유튜브 · 비메오 주소 (권장)</span>' +
+        '<input id="mVurl" placeholder="https://youtu.be/xxxxxxxxxxx" value="' +
+          esc(v && v.kind === 'youtube' ? 'https://youtu.be/' + v.id : v && v.kind === 'vimeo' ? 'https://vimeo.com/' + v.id : v && v.kind === 'url' ? v.src : '') + '"></label>' +
+      '<div class="row"><button class="btn primary" id="mVsave">영상 넣기</button>' +
+        '<button class="btn" id="mVfileBtn">영상 파일 직접 올리기</button>' +
+        (v ? '<button class="btn danger" id="mVdel">영상 빼기</button>' : '') +
+        '<span class="pmeta" id="mVmsg"></span></div>' +
+      '<input type="file" id="mVfile" accept="video/mp4,video/webm,video/quicktime" hidden>' +
+      (v ? '<div class="vprev">' + videoPreview(v) + '</div>' : '') +
+    '</div>';
+}
+function videoPreview(v) {
+  var em = window.MEDIA.videoEmbedSrc(v);
+  if (em) return '<iframe src="' + em + '" allowfullscreen loading="lazy" title="영상 미리보기"></iframe>' +
+    '<p class="pmeta" style="margin:8px 0 0">' + (v.kind === 'youtube' ? '유튜브' : '비메오') + ' · ' + esc(v.id) + '</p>';
+  return '<video controls preload="metadata" src="' + esc(v.src) + '" data-mp="' + esc(v.src) + '"></video>' +
+    '<p class="pmeta" style="margin:8px 0 0">' + esc(v.src) + (v.bytes ? ' · ' + window.MEDIA.fmtBytes(v.bytes) : '') + '</p>';
+}
+function refreshMStat() {
+  window.MEDIA.usage().then(function (u) {
+    MSTAT = u;
+    var a = document.getElementById('mStatN'), b = document.getElementById('mStatB');
+    if (a) a.textContent = u.count;
+    if (b) b.textContent = window.MEDIA.fmtBytes(u.bytes);
+  });
+  window.MEDIA.hydrate(document);
+}
+
+/* 사진 넣기 */
+function takePhotos(files) {
+  var p = getP(MSEL); if (!p) return;
+  var busy = document.getElementById('mBusy');
+  var list = Array.prototype.slice.call(files).filter(function (f) { return /^image\//.test(f.type); });
+  if (!list.length) return toast('사진 파일이 아닙니다');
+  var ph = photosOf(p).slice();
+  var used = {}; ph.forEach(function (s) { used[s] = 1; });
+  var n = 0, saved = 0, was = 0, now = 0;
+
+  busy.hidden = false; busy.textContent = '사진 ' + list.length + '장 줄이는 중…';
+
+  (function step(i) {
+    if (i >= list.length) {
+      setP(p.id, 'imgs', ph);
+      if (p.img && ph.indexOf(p.img) === 0) { /* 예전 img 는 그대로 두어도 됩니다 */ }
+      busy.textContent = '끝났습니다 — ' + saved + '장 · ' +
+        window.MEDIA.fmtBytes(was) + ' → ' + window.MEDIA.fmtBytes(now);
+      render();
+      setTimeout(function () { toast(saved + '장 넣었습니다'); }, 60);
+      return;
+    }
+    busy.textContent = '사진 줄이는 중… (' + (i + 1) + '/' + list.length + ')';
+    window.MEDIA.shrink(list[i], 1200, 0.82).then(function (r) {
+      var path;
+      do { n++; path = 'assets/img/' + p.id + '_' + (n < 10 ? '0' + n : n) + '.jpg'; } while (used[path]);
+      used[path] = 1;
+      return window.MEDIA.put(path, r.data, { bytes: r.bytes, w: r.w, h: r.h, product: String(p.id), type: 'img' })
+        .then(function () { ph.push(path); saved++; was += r.was; now += r.bytes; });
+    }).catch(function (e) {
+      busy.textContent = '한 장을 건너뛰었습니다: ' + (e.message || '읽기 실패');
+    }).then(function () { step(i + 1); });
+  })(0);
+}
+
+/* 파일 내려받기 */
+function downloadAllMedia() {
+  window.MEDIA.list().then(function (rows) {
+    if (!rows.length) return toast('내려받을 파일이 없습니다');
+    var i = 0;
+    (function step() {
+      if (i >= rows.length) { toast(rows.length + '개 내려받았습니다'); return; }
+      var r = rows[i++];
+      window.MEDIA.download(r.data, r.path.split('/').pop());
+      setTimeout(step, 350);
+    })();
+  });
 }
 
 /* ---------- 상품 추가 ---------- */
@@ -599,7 +803,8 @@ function vSet() {
 /* =========================== 그리기 =========================== */
 function render() {
   paintTabs(); paintBar();
-  ({ home: vHome, prod: vProd, add: vAdd, lang: vLang, fx: vFx, order: vOrder, deploy: vDeploy, set: vSet }[TAB])();
+  ({ home: vHome, prod: vProd, media: vMedia, add: vAdd, lang: vLang, fx: vFx, order: vOrder, deploy: vDeploy, set: vSet }[TAB])();
+  if (window.MEDIA) window.MEDIA.hydrate(document);
   window.scrollTo(0, 0);
 }
 function go(tab) { TAB = tab; try { history.replaceState(null, '', '#' + tab); } catch (e) {} render(); }
@@ -641,6 +846,50 @@ document.addEventListener('click', function (e) {
 
   /* 상품 추가 */
   if (e.target.id === 'addBtn') { addProduct(); return; }
+
+  /* ----- 사진·영상 ----- */
+  if (e.target.closest('#mDrop')) { document.getElementById('mFile').click(); return; }
+  if (e.target.id === 'mDlAll') { downloadAllMedia(); return; }
+  if (e.target.id === 'mWipe') {
+    if (!confirm('보관함의 미리보기 파일을 모두 지웁니다. 이미 폴더에 넣고 배포하셨다면 지워도 사이트에는 그대로 보입니다. 계속할까요?')) return;
+    window.MEDIA.clear().then(function () { render(); toast('보관함을 비웠습니다'); });
+    return;
+  }
+  var pb = e.target.closest('[data-ph]');
+  if (pb) {
+    var p0 = getP(MSEL); if (!p0) return;
+    var arr = photosOf(p0).slice(), i0 = +pb.dataset.i;
+    if (pb.dataset.ph === 'del') {
+      var gone = arr.splice(i0, 1)[0];
+      window.MEDIA.del(gone);
+      setP(p0.id, 'imgs', arr);
+      if (p0.img === gone) setP(p0.id, 'img', arr[0] || '');
+    } else {
+      var j = pb.dataset.ph === 'left' ? i0 - 1 : i0 + 1;
+      if (j < 0 || j >= arr.length) return;
+      var tmp2 = arr[i0]; arr[i0] = arr[j]; arr[j] = tmp2;
+      setP(p0.id, 'imgs', arr);
+      if (p0.img) setP(p0.id, 'img', arr[0]);
+    }
+    render();
+    return;
+  }
+  if (e.target.id === 'mVsave') {
+    var p1 = getP(MSEL); if (!p1) return;
+    var raw = document.getElementById('mVurl').value.trim();
+    if (!raw) return toast('영상 주소를 넣어 주세요');
+    var v1 = window.MEDIA.parseVideo(raw);
+    if (!v1) { document.getElementById('mVmsg').textContent = '유튜브·비메오 주소나 mp4 주소만 됩니다.'; return; }
+    setP(p1.id, 'video', v1); render(); toast('영상을 넣었습니다');
+    return;
+  }
+  if (e.target.id === 'mVfileBtn') { document.getElementById('mVfile').click(); return; }
+  if (e.target.id === 'mVdel') {
+    var p2 = getP(MSEL); if (!p2) return;
+    if (p2.video && p2.video.kind === 'file') window.MEDIA.del(p2.video.src);
+    setP(p2.id, 'video', null); render(); toast('영상을 뺐습니다');
+    return;
+  }
 
   /* 암호 */
   if (e.target.id === 'pwSave') {
@@ -689,6 +938,28 @@ document.addEventListener('change', function (e) {
     }
     return;
   }
+  if (e.target.id === 'mSel') { MSEL = e.target.value; render(); return; }
+  if (e.target.id === 'mFile') { takePhotos(e.target.files); e.target.value = ''; return; }
+  if (e.target.id === 'mVfile') {
+    var f = e.target.files[0]; e.target.value = '';
+    if (!f) return;
+    var pv = getP(MSEL); if (!pv) return;
+    var msg = document.getElementById('mVmsg');
+    if (f.size > 25 * 1024 * 1024) {
+      msg.textContent = '너무 큽니다 (' + window.MEDIA.fmtBytes(f.size) + '). 25MB 아래로 줄이거나 유튜브를 쓰세요.';
+      return;
+    }
+    msg.textContent = '읽는 중…';
+    var ext = (f.name.split('.').pop() || 'mp4').toLowerCase();
+    var vpath = 'assets/video/' + pv.id + '.' + (ext === 'mov' ? 'mp4' : ext);
+    window.MEDIA.fileToDataURL(f).then(function (d) {
+      return window.MEDIA.put(vpath, d, { bytes: f.size, product: String(pv.id), type: 'video' });
+    }).then(function () {
+      setP(pv.id, 'video', { kind: 'file', src: vpath, bytes: f.size });
+      render(); toast('영상 파일을 넣었습니다');
+    }).catch(function () { msg.textContent = '읽지 못했습니다.'; });
+    return;
+  }
   if (['fq', 'fhall', 'fcat', 'fonly'].indexOf(e.target.id) >= 0) {
     FILT.q = document.getElementById('fq').value;
     FILT.hall = document.getElementById('fhall').value;
@@ -702,6 +973,25 @@ document.addEventListener('input', function (e) {
     FILT.q = document.getElementById('fq').value; vProd();
     var el = document.getElementById('fq'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
   }, 260); }
+});
+
+/* 끌어다 놓기 */
+['dragenter', 'dragover'].forEach(function (ev) {
+  document.addEventListener(ev, function (e) {
+    var d = e.target.closest && e.target.closest('#mDrop');
+    if (!d) return;
+    e.preventDefault(); d.classList.add('over');
+  });
+});
+document.addEventListener('dragleave', function (e) {
+  var d = e.target.closest && e.target.closest('#mDrop');
+  if (d) d.classList.remove('over');
+});
+document.addEventListener('drop', function (e) {
+  var d = e.target.closest && e.target.closest('#mDrop');
+  if (!d) return;
+  e.preventDefault(); d.classList.remove('over');
+  if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) takePhotos(e.dataTransfer.files);
 });
 
 /* ---------- 상품 추가 ---------- */
@@ -808,6 +1098,11 @@ function exportData() {
   P.forEach(function (p) {
     var c = {}; for (var k in p) c[k] = p[k];
     if (String(c.id).indexOf('n') === 0) c.id = nextId();      // 새 상품에 정식 번호를 줍니다
+    /* 빈 값은 파일에 넣지 않습니다 — 파일이 깔끔해야 나중에 손으로도 고칩니다 */
+    if (!c.video) delete c.video;
+    if (c.imgs && !c.imgs.length) delete c.imgs;
+    if (c.imgs && c.imgs.length) c.img = c.imgs[0];            // 목록 화면은 img 한 장만 씁니다
+    if (!c.img) delete c.img;
     lines.push('  ' + JSON.stringify(c) + ',');
   });
   lines.push('];');

@@ -137,8 +137,19 @@ function freeFrom() { return S.cur === 'KRW' ? 120000 : 80; }
 function shipFee() { return subtotal() >= freeFrom() ? 0 : (S.cur === 'KRW' ? 18000 : 12.9); }
 
 /* ---------- 공통 UI ---------- */
+/* 사진이 여러 장이면 첫 장이 대표 사진입니다. */
+function photos(p) {
+  var a = (p.imgs && p.imgs.length) ? p.imgs.slice() : [];
+  if (p.img && a.indexOf(p.img) < 0) a.unshift(p.img);
+  return a;
+}
 function pimgHTML(p, extra) {
-  if (p.img) return '<div class="pimg has-img' + (extra || '') + '"><img src="' + p.img + '" alt="" loading="lazy"></div>';
+  var ph = photos(p);
+  if (ph.length) {
+    /* data-mp: 파일이 아직 폴더에 없으면 관리자 보관함의 미리보기로 바꿔 끼웁니다 (media.js) */
+    return '<div class="pimg has-img' + (extra || '') + '">' +
+      '<img src="' + ph[0] + '" data-mp="' + ph[0] + '" alt="" loading="lazy"></div>';
+  }
   return '<div class="pimg' + (extra || '') + '" style="--h:' + HUE[p.cat] + '">' +
     '<span class="gl"><svg viewBox="0 0 24 24">' + ICON[p.cat] + '</svg></span></div>';
 }
@@ -270,6 +281,7 @@ function paint() {
   if (f) f.innerHTML = footer();
   paintCartCount();
   RENDER();
+  if (window.MEDIA) window.MEDIA.hydrate(document);
   syncUrl();
 }
 /* 주소창만 조용히 맞춰 둡니다. 페이지를 다시 불러오지 않으므로
@@ -325,7 +337,7 @@ window.ME = {
   S: S, t: t, P: P, B: B, CATS: CATS, HUE: HUE, ICON: ICON, MARK: MARK,
   prod: prod, brand: brand, nm: nm, tg: tg, esc: esc, link: link,
   fmt: fmt, fmtAlt: fmtAlt, fmtN: fmtN, unit: unit, fxLine: fxLine, toKRW: toKRW,
-  pcard: pcard, bcard: bcard, pimgHTML: pimgHTML, flag: flag, repaint: paint, halls: halls, boot: boot, toast: toast,
+  pcard: pcard, bcard: bcard, pimgHTML: pimgHTML, photos: photos, flag: flag, repaint: paint, halls: halls, boot: boot, toast: toast,
   cartAdd: cartAdd, cartRemove: cartRemove, cartCount: cartCount,
   subtotal: subtotal, shipFee: shipFee, freeFrom: freeFrom
 };
