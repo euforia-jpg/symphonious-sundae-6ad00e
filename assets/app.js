@@ -1,4 +1,4 @@
-/* ===== Mercado Euforia — 공통 스크립트 ===== */
+/* ===== Mediterráneo — 공통 스크립트 ===== */
 (function () {
 'use strict';
 
@@ -27,8 +27,8 @@ function t(k) { var o = window.T[k]; return (o && (o[S.lang] || o.en)) || k; }
 function tIn(k, lang) { var o = window.T[k]; return (o && (o[lang] || o.en)) || k; }
 
 /* 관마다 노리는 손님이 다릅니다.
-   Mediterráneo = 스페인·포르투갈·이탈리아 상품을 한국 손님에게  -> 한국어 / 원화
-   Shop Korea   = 한국 상품을 남유럽 손님에게              -> 스페인어 / 유로 */
+   Europa = 스페인·포르투갈·이탈리아 상품을 한국 손님에게  -> 한국어 / 원화
+   Corea  = 한국 상품을 남유럽 손님에게                    -> 스페인어 / 유로 */
 var HALL_DEFAULT = { es: { lang: 'ko', cur: 'KRW' }, kr: { lang: 'es', cur: 'EUR' } };
 
 /* ---------- 돈 ---------- */
@@ -139,6 +139,18 @@ function freeFrom() { return S.cur === 'KRW' ? 120000 : 80; }
 function shipFee() { return subtotal() >= freeFrom() ? 0 : (S.cur === 'KRW' ? 18000 : 12.9); }
 
 /* ---------- 공통 UI ---------- */
+/* 이 상품이 어느 나라 것인지.
+   원산지 표기("Montilla-Moriles, Córdoba, ES")나 생산자 소재지("Barcelona, ES") 끝의
+   두 글자 코드를 읽습니다. 못 읽으면 관 단위로 뭉뚱그립니다. */
+function country(p) {
+  var b = brand(p.brand);
+  var src = p.origin || (b && b.loc) || '';
+  var m = String(src).match(/(?:^|[,\s])([A-Z]{2})\s*$/);
+  var key = m ? 'co.' + m[1] : null;
+  if (key && window.T[key]) return t(key);
+  return t(p.hall === 'es' ? 'co.eu' : 'co.KR');
+}
+
 /* 사진이 여러 장이면 첫 장이 대표 사진입니다. */
 function photos(p) {
   var a = (p.imgs && p.imgs.length) ? p.imgs.slice() : [];
@@ -174,7 +186,7 @@ function priceHTML(p) {
 }
 function pcard(p) {
   var b = brand(p.brand);
-  var bd = '<span class="bdg eu">' + t(p.hall === 'es' ? 'hall.esSub' : 'hall.krSub') + '</span>';
+  var bd = '<span class="bdg eu">' + country(p) + '</span>';
   if (p.badge) bd += '<span class="bdg ' + p.badge + '">' + (p.badge === 'new' ? 'NEW' : 'BEST') + '</span>';
   return '<a class="pcard" href="' + link('product.html', { id: p.id }) + '">' +
     pimgHTML(p) +
@@ -196,7 +208,7 @@ function header(active) {
   var links = [['index.html', 'nav.home'], ['shop.html', 'nav.shop'], ['brands.html', 'nav.brands']];
   return '<div class="wrap head-in">' +
     '<div class="head-top">' +
-    '<a class="lockup" href="' + link('index.html', {}) + '">' + MARK + '<span class="wm">Mercado Euforia</span></a>' +
+    '<a class="lockup" href="' + link('index.html', {}) + '">' + MARK + '<span class="wm">Mediterráneo</span></a>' +
     '<div class="head-tools">' +
       '<button type="button" class="picker-btn" id="pickerBtn" aria-expanded="false" aria-controls="picker">' +
         flag(S.lang) + '<span class="pb-t">' + S.lang.toUpperCase() + ' · ' + (S.cur === 'KRW' ? '₩' : '€') + '</span>' +
@@ -225,7 +237,7 @@ function header(active) {
 }
 function footer() {
   return '<div class="wrap foot-in">' +
-    '<span class="lockup">' + MARK + '<span class="wm">Mercado Euforia</span></span>' +
+    '<span class="lockup">' + MARK + '<span class="wm">Mediterráneo</span></span>' +
     '<span>' + t('foot.rights') + '</span>' +
     '<span class="head-sp"></span>' +
     '<a href="mailto:euforia@euforiatour.com">' + t('foot.contact') + ' · euforia@euforiatour.com</a>' +
@@ -352,7 +364,7 @@ window.ME = {
   S: S, t: t, P: P, PV: PV, B: B, CATS: CATS, HUE: HUE, ICON: ICON, MARK: MARK,
   prod: prod, brand: brand, nm: nm, tg: tg, esc: esc, link: link,
   fmt: fmt, fmtAlt: fmtAlt, fmtN: fmtN, unit: unit, fxLine: fxLine, toKRW: toKRW,
-  pcard: pcard, bcard: bcard, pimgHTML: pimgHTML, photos: photos, tileFallback: tileFallback,
+  country: country, pcard: pcard, bcard: bcard, pimgHTML: pimgHTML, photos: photos, tileFallback: tileFallback,
   flag: flag, repaint: paint, halls: halls, boot: boot, toast: toast,
   cartAdd: cartAdd, cartRemove: cartRemove, cartCount: cartCount,
   subtotal: subtotal, shipFee: shipFee, freeFrom: freeFrom

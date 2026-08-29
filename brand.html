@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>생산자 — Mercado Euforia</title>
+<title>생산자 — Mediterráneo</title>
 <meta name="description" content="생산자 소개와 취급 상품.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#1E4FD8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Mercado">
+<meta name="apple-mobile-web-app-title" content="Mediterráneo">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,7 +34,7 @@
   M.boot('brands.html', function () {
     var main = document.getElementById('main');
     if (!b) { main.innerHTML = '<div class="empty"><div class="big">' + t('pd.notfound') + '</div></div>'; return; }
-    document.title = b.name + ' — Mercado Euforia';
+    document.title = b.name + ' — Mediterráneo';
     var list = M.PV().filter(function (p) { return p.brand === b.id; });
     main.innerHTML =
       '<section class="hero" style="background:linear-gradient(135deg,hsl(' + b.h + ' 58% 46%),hsl(' + b.h + ' 52% 30%))">' +

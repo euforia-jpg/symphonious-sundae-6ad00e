@@ -1,4 +1,4 @@
-/* ===== Mercado Euforia — 공통 스타일 =====
+/* ===== Mediterráneo — 공통 스타일 =====
    색을 바꾸려면 아래 :root 의 --cobalt / --jade / --pom 세 줄만 고치면 됩니다. */
 :root{
   --bg:#F1EFE9; --surface:#FFFFFF; --surface2:#FAF8F4;
@@ -65,9 +65,9 @@ input,select,textarea{font:inherit; color:inherit}
 
 /* ---------- 로고 ---------- */
 .mk{width:1em;height:1em;flex:none}
-.lockup{display:flex;align-items:center;gap:9px}
-.lockup .mk{font-size:26px;color:var(--ink)}
-.lockup .wm{font-size:13px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;white-space:nowrap}
+.lockup{display:flex;align-items:center;gap:11px}
+.lockup .mk{font-size:34px;color:var(--ink)}
+.lockup .wm{font-size:18px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
 
 /* ---------- 헤더 ---------- */
 .site-head{position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
@@ -106,8 +106,8 @@ input,select,textarea{font:inherit; color:inherit}
   .wrap{padding:0 16px}
   .head-in{flex-direction:column;align-items:stretch;gap:9px;padding-block:10px 8px}
   .head-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
-  .lockup .mk{font-size:22px}
-  .lockup .wm{font-size:11px;letter-spacing:.1em}
+  .lockup .mk{font-size:29px}
+  .lockup .wm{font-size:15px;letter-spacing:.08em}
   .nav{margin-right:0;gap:20px;font-size:14px;overflow-x:auto;scrollbar-width:none}
   .nav::-webkit-scrollbar{display:none}
   .cart-btn{padding:6px 11px}
@@ -320,8 +320,8 @@ input,select,textarea{font:inherit; color:inherit}
 /* ---------- 푸터 ---------- */
 .site-foot{margin-top:64px;border-top:1px solid var(--line);padding:32px 0 46px;color:var(--muted);font-size:13px}
 .foot-in{display:flex;gap:22px;flex-wrap:wrap;align-items:center}
-.foot-in .lockup .mk{font-size:22px}
-.foot-in .lockup .wm{font-size:11.5px}
+.foot-in .lockup .mk{font-size:26px}
+.foot-in .lockup .wm{font-size:14px}
 
 /* ---------- 토스트 ---------- */
 .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(12px);background:var(--ink);color:var(--bg);
@@ -338,7 +338,7 @@ input,select,textarea{font:inherit; color:inherit}
 /* 아주 좁은 화면: 언어 버튼은 국기만 남깁니다 */
 @media(max-width:374px){
   .lockup{min-width:0}
-  .lockup .wm{font-size:10px;letter-spacing:.08em;overflow:hidden;text-overflow:ellipsis}
+  .lockup .wm{font-size:13px;letter-spacing:.05em;overflow:hidden;text-overflow:ellipsis}
   .picker-btn .pb-t{display:none}
   .head-tools{gap:6px}
 }

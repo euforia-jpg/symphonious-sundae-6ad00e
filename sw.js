@@ -1,4 +1,4 @@
-/* Mercado Euforia — 서비스 워커
+/* Mediterráneo — 서비스 워커
 
    한 번 크게 데인 자리입니다. 예전에는 그림·코드·상품목록을 모두
    "저장해 둔 것 먼저 보여 주고 뒤에서 갱신" 방식으로 다뤘습니다.
@@ -11,7 +11,7 @@
 
    숫자(VERSION)를 올리면 예전에 저장해 둔 것이 전부 버려집니다.
    사이트를 고칠 때마다 이 숫자를 올립니다. */
-var VERSION = 'me-2026-08-29-7';
+var VERSION = 'me-2026-08-29-8';
 
 var CORE = [
   './', 'index.html', 'shop.html', 'product.html', 'brands.html', 'brand.html',

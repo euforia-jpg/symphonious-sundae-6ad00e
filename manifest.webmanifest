@@ -1,6 +1,6 @@
 {
-  "name": "Mercado Euforia",
-  "short_name": "Mercado",
+  "name": "Mediterráneo",
+  "short_name": "Mediterráneo",
   "description": "유럽과 한국을, 한 장바구니 안에서",
   "start_url": "./index.html",
   "display": "standalone",
@@ -35,7 +35,7 @@
   ],
   "shortcuts": [
     {
-      "name": "Mediterráneo",
+      "name": "Europa",
       "url": "index.html?hall=es",
       "icons": [
         {
@@ -45,7 +45,7 @@
       ]
     },
     {
-      "name": "Shop Korea",
+      "name": "Corea",
       "url": "index.html?hall=kr",
       "icons": [
         {

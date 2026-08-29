@@ -1,4 +1,4 @@
-# Mercado Euforia — 웹 버전
+# Mediterráneo — 웹 버전
 
 이 폴더를 통째로 GitHub 저장소에 올리고 Netlify에 연결하면 사이트가 뜹니다.
 

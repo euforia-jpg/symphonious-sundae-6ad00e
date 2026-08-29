@@ -1,19 +1,19 @@
-/* Mercado Euforia — 화면 문구. 언어를 추가하려면 각 줄에 코드를 하나 더 넣으면 됩니다. */
+/* Mediterráneo — 화면 문구. 언어를 추가하려면 각 줄에 코드를 하나 더 넣으면 됩니다. */
 window.LANGS = [
   ['ko','한국어'],['es','Español'],['en','English'],['fr','Français'],
   ['de','Deutsch'],['it','Italiano'],['zh','中文']
 ];
 window.T = {
-'site.tagline':{ko:'유럽과 한국을, 한 장바구니 안에서',es:'Europa y Corea, en una misma cesta',en:'Europe and Korea, in one basket',fr:'L’Europe et la Corée, dans un même panier',de:'Europa und Korea, in einem Warenkorb',it:'Europa e Corea, in un solo carrello',zh:'欧洲与韩国，尽在同一个购物车'},
+'site.tagline':{ko:'남유럽에서 한국까지, 항공 직송',es:'Del sur de Europa a Corea, por vía aérea',en:'From Southern Europe to Korea, flown direct',fr:'De l’Europe du Sud à la Corée, par avion',de:'Von Südeuropa nach Korea, per Luftfracht',it:'Dal Sud Europa alla Corea, per via aerea',zh:'自南欧空运直送韩国'},
 
 'nav.home':{ko:'홈',es:'Inicio',en:'Home',fr:'Accueil',de:'Start',it:'Home',zh:'首页'},
 'nav.shop':{ko:'전체 상품',es:'Productos',en:'Shop',fr:'Boutique',de:'Shop',it:'Prodotti',zh:'全部商品'},
 'nav.brands':{ko:'생산자',es:'Productores',en:'Makers',fr:'Producteurs',de:'Hersteller',it:'Produttori',zh:'品牌'},
 'nav.cart':{ko:'장바구니',es:'Cesta',en:'Cart',fr:'Panier',de:'Warenkorb',it:'Carrello',zh:'购物车'},
 
-'hall.esName':{ko:'Mediterráneo',es:'Mediterráneo',en:'Mediterráneo',fr:'Mediterráneo',de:'Mediterráneo',it:'Mediterráneo',zh:'地中海馆'},
+'hall.esName':{ko:'Europa',es:'Europa',en:'Europa',fr:'Europa',de:'Europa',it:'Europa',zh:'欧洲馆'},
 'hall.esSub':{ko:'스페인 · 포르투갈 · 이탈리아',es:'España · Portugal · Italia',en:'Spain · Portugal · Italy',fr:'Espagne · Portugal · Italie',de:'Spanien · Portugal · Italien',it:'Spagna · Portogallo · Italia',zh:'西班牙 · 葡萄牙 · 意大利'},
-'hall.krName':{ko:'Shop Korea',es:'Shop Korea',en:'Shop Korea',fr:'Shop Korea',de:'Shop Korea',it:'Shop Korea',zh:'韩国馆'},
+'hall.krName':{ko:'Corea',es:'Corea',en:'Corea',fr:'Corea',de:'Corea',it:'Corea',zh:'韩国馆'},
 'hall.krSub':{ko:'한국 정품 직배송',es:'Auténtico, directo de Corea',en:'Authentic, direct from Korea',fr:'Authentique, direct de Corée',de:'Original, direkt aus Korea',it:'Autentico, diretto dalla Corea',zh:'韩国正品直发'},
 
 /* 첫 화면. 눈썹글씨는 같은 한 단어를 스페인어·이탈리아어·포르투갈어로 나란히 적은
@@ -25,6 +25,14 @@ window.T = {
 'home.titleKR':{ko:'한국에서 실제로\n쓰는 것들만',es:'Solo lo que en\nCorea se usa de verdad',en:'Only what Korea\nactually uses',fr:'Seulement ce qu’on\nutilise vraiment en Corée',de:'Nur was Korea\nwirklich benutzt',it:'Solo ciò che in\nCorea si usa davvero',zh:'只选韩国人\n真正在用的'},
 'home.subKR':{ko:'관광 상품이 아닌, 한국 가정의 물건. 한국에서 남유럽까지 항공으로 보내 드립니다.',es:'Nada de souvenirs: objetos de casas coreanas. De Corea al sur de Europa por vía aérea.',en:'No souvenirs — things from Korean homes. Flown from Korea to Southern Europe.',fr:'Pas de souvenirs : des objets du quotidien coréen. De la Corée vers l’Europe du Sud, par avion.',de:'Keine Souvenirs — Dinge aus koreanischen Haushalten. Von Korea nach Südeuropa per Luftfracht.',it:'Niente souvenir: oggetti delle case coreane. Dalla Corea al Sud Europa per via aerea.',zh:'不是纪念品，是韩国家庭的日常。自韩国空运直送南欧。'},
 /* 항공 노선 표시 */
+/* 상품 카드에 붙는 나라 이름. 원산지 표기 끝의 두 글자 코드로 고릅니다. */
+'co.ES':{ko:'스페인',es:'España',en:'Spain',fr:'Espagne',de:'Spanien',it:'Spagna',zh:'西班牙'},
+'co.PT':{ko:'포르투갈',es:'Portugal',en:'Portugal',fr:'Portugal',de:'Portugal',it:'Portogallo',zh:'葡萄牙'},
+'co.IT':{ko:'이탈리아',es:'Italia',en:'Italy',fr:'Italie',de:'Italien',it:'Italia',zh:'意大利'},
+'co.FR':{ko:'프랑스',es:'Francia',en:'France',fr:'France',de:'Frankreich',it:'Francia',zh:'法国'},
+'co.GR':{ko:'그리스',es:'Grecia',en:'Greece',fr:'Grèce',de:'Griechenland',it:'Grecia',zh:'希腊'},
+'co.KR':{ko:'한국',es:'Corea',en:'Korea',fr:'Corée',de:'Korea',it:'Corea',zh:'韩国'},
+'co.eu':{ko:'남유럽',es:'Sur de Europa',en:'Southern Europe',fr:'Europe du Sud',de:'Südeuropa',it:'Sud Europa',zh:'南欧'},
 'home.rFromES':{ko:'남유럽',es:'Sur de Europa',en:'Southern Europe',fr:'Europe du Sud',de:'Südeuropa',it:'Sud Europa',zh:'南欧'},
 'home.rToES':{ko:'한국 · 항공 직송',es:'Corea · vía aérea',en:'Korea · by air',fr:'Corée · par avion',de:'Korea · per Luftfracht',it:'Corea · via aerea',zh:'韩国 · 空运直送'},
 'home.rFromKR':{ko:'한국',es:'Corea',en:'Korea',fr:'Corée',de:'Korea',it:'Corea',zh:'韩国'},

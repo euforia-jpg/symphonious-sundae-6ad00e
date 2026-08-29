@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>관리자 · Mercado Euforia</title>
+<title>관리자 · Mediterráneo</title>
 <meta name="robots" content="noindex,nofollow">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <meta name="theme-color" content="#1E4FD8">
@@ -197,7 +197,7 @@ summary:focus-visible{outline:2px solid color-mix(in srgb,var(--cobalt) 50%,tran
   <div class="gate-card">
     <svg class="mk" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 36V22a7 7 0 0 1 14 0v14"/><path d="M24 36V22a7 7 0 0 1 14 0v14"/><path d="M6 41h36"/></svg>
     <h1>관리자 대쉬보드</h1>
-    <p>Mercado Euforia</p>
+    <p>Mediterráneo</p>
     <label class="fld"><span>암호</span><input type="password" id="pw" autocomplete="current-password"></label>
     <button class="btn primary" id="pwBtn" style="width:100%">열기</button>
     <p style="margin:14px 0 0;font-size:12px;line-height:1.6">처음 암호는 <b class="mono">euforia</b> 입니다. 들어간 뒤 <b>설정</b> 탭에서 바꾸세요.</p>
@@ -210,7 +210,7 @@ summary:focus-visible{outline:2px solid color-mix(in srgb,var(--cobalt) 50%,tran
   <div class="wrap ahead-in">
     <span class="brandline">
       <svg class="mk" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 36V22a7 7 0 0 1 14 0v14"/><path d="M24 36V22a7 7 0 0 1 14 0v14"/><path d="M6 41h36"/></svg>
-      Mercado Euforia
+      Mediterráneo
     </span>
     <span class="tagme">관리자</span>
     <span class="sp"></span>
@@ -240,7 +240,7 @@ summary:focus-visible{outline:2px solid color-mix(in srgb,var(--cobalt) 50%,tran
 'use strict';
 
 /* =========================================================================
-   Mercado Euforia — 관리자 대쉬보드
+   Mediterráneo — 관리자 대쉬보드
 
    이 대쉬보드는 가게와 세 갈래로 이어져 있습니다.
    1) 읽기 : assets/data.js 를 그대로 읽어 상품·브랜드·환율을 보여 줍니다.
@@ -417,7 +417,7 @@ function vHome() {
   view(
     '<h2 class="sec">요약</h2><p class="sub">' + (D.ts ? '마지막 수정 ' + esc(D.ts) : '아직 수정한 내용이 없습니다') + '</p>' +
     '<div class="cards">' +
-      kpi('전체 상품', P.length, es.length + ' · Mediterráneo / ' + (P.length - es.length) + ' · Shop Korea') +
+      kpi('전체 상품', P.length, es.length + ' · Europa / ' + (P.length - es.length) + ' · Corea') +
       kpi('지금 팔 수 있음', live.length, '가격·용량·재고가 모두 있는 상품', live.length === P.length ? 'ok' : '') +
       kpi('아직 못 파는 것', P.length - live.length, '가격이나 재고가 비어 있습니다', (P.length - live.length) ? 'bad' : 'ok') +
       kpi('브랜드', BASE_B.length, '생산자 수') +
@@ -464,8 +464,8 @@ function vProd() {
     '<div class="panel"><div class="row">' +
       '<input id="fq" placeholder="이름·브랜드·번호로 찾기" style="max-width:230px" value="' + esc(FILT.q) + '">' +
       '<select class="s" id="fhall" style="width:150px"><option value="">전체 관</option>' +
-        '<option value="es"' + (FILT.hall === 'es' ? ' selected' : '') + '>Mediterráneo</option>' +
-        '<option value="kr"' + (FILT.hall === 'kr' ? ' selected' : '') + '>Shop Korea</option></select>' +
+        '<option value="es"' + (FILT.hall === 'es' ? ' selected' : '') + '>Europa</option>' +
+        '<option value="kr"' + (FILT.hall === 'kr' ? ' selected' : '') + '>Corea</option></select>' +
       '<select class="s" id="fcat" style="width:130px"><option value="">전체 분류</option>' +
         CATS.map(function (c) { return '<option value="' + c + '"' + (FILT.cat === c ? ' selected' : '') + '>' + CATNAME[c] + '</option>'; }).join('') + '</select>' +
       '<select class="s" id="fonly" style="width:160px"><option value="">전체</option>' +
@@ -777,8 +777,8 @@ function vEdit() {
 
     '<div class="panel"><h3>기본</h3><div class="grid2">' +
       '<label class="fld"><span>관</span><select id="e_hall">' +
-        '<option value="es"' + (p.hall === 'es' ? ' selected' : '') + '>Mediterráneo (스페인·포르투갈·이탈리아 → 한국)</option>' +
-        '<option value="kr"' + (p.hall === 'kr' ? ' selected' : '') + '>Shop Korea (한국 → 남유럽)</option></select></label>' +
+        '<option value="es"' + (p.hall === 'es' ? ' selected' : '') + '>Europa (스페인·포르투갈·이탈리아 → 한국)</option>' +
+        '<option value="kr"' + (p.hall === 'kr' ? ' selected' : '') + '>Corea (한국 → 남유럽)</option></select></label>' +
       '<label class="fld"><span>분류</span><select id="e_cat">' + CATS.map(function (c) {
         return '<option value="' + c + '"' + (p.cat === c ? ' selected' : '') + '>' + CATNAME[c] + '</option>'; }).join('') + '</select></label>' +
       '<label class="fld"><span>브랜드(생산자)</span><select id="e_brand">' + BASE_B.map(function (b) {
@@ -1798,7 +1798,7 @@ function buildDataJs() {
   var P = merged(), f = fxNow();
   var today = new Date().toISOString().slice(0, 10);
   var lines = [];
-  lines.push('/* Mercado Euforia — 상품 데이터.');
+  lines.push('/* Mediterráneo — 상품 데이터.');
   lines.push('   관리자 대쉬보드에서 내보냈습니다: ' + today);
   lines.push('   이 파일을 assets 폴더에 덮어쓰고 배포하면 손님 화면에 반영됩니다. */');
   lines.push('window.BRANDS = [');

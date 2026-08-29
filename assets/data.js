@@ -1,4 +1,4 @@
-/* Mercado Euforia — 상품 데이터.
+/* Mediterráneo — 상품 데이터.
    실제 판매 상품만 남긴 판입니다: 2026-08-29
    상품을 넣고 빼는 것은 admin.html 에서 하시고, 내보낸 파일을 이 자리에 덮어쓰면 됩니다. */
 window.BRANDS = [
