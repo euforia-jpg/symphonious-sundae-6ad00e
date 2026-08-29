@@ -26,6 +26,9 @@ function t(k) { var o = window.T[k]; return (o && (o[S.lang] || o.en)) || k; }
 /* 특정 언어로 못박아 읽습니다 (관 안내 문구용) */
 function tIn(k, lang) { var o = window.T[k]; return (o && (o[lang] || o.en)) || k; }
 
+/* 문의 메일 주소. 바꿀 일이 있으면 이 한 줄만 고치면 사이트 전체가 따라옵니다. */
+var MAIL = 'rondalosnuevos@gmail.com';
+
 /* 관마다 노리는 손님이 다릅니다.
    Europa = 스페인·포르투갈·이탈리아 상품을 한국 손님에게  -> 한국어 / 원화
    Corea  = 한국 상품을 남유럽 손님에게                    -> 스페인어 / 유로 */
@@ -240,7 +243,7 @@ function footer() {
     '<span class="lockup">' + MARK + '<span class="wm">Mediterráneo</span></span>' +
     '<span>' + t('foot.rights') + '</span>' +
     '<span class="head-sp"></span>' +
-    '<a href="mailto:euforia@euforiatour.com">' + t('foot.contact') + ' · euforia@euforiatour.com</a>' +
+    '<a href="mailto:' + MAIL + '">' + t('foot.contact') + ' · ' + MAIL + '</a>' +
     '</div>';
 }
 function paintCartCount() {
@@ -364,7 +367,7 @@ window.ME = {
   S: S, t: t, P: P, PV: PV, B: B, CATS: CATS, HUE: HUE, ICON: ICON, MARK: MARK,
   prod: prod, brand: brand, nm: nm, tg: tg, esc: esc, link: link,
   fmt: fmt, fmtAlt: fmtAlt, fmtN: fmtN, unit: unit, fxLine: fxLine, toKRW: toKRW,
-  country: country, pcard: pcard, bcard: bcard, pimgHTML: pimgHTML, photos: photos, tileFallback: tileFallback,
+  MAIL: MAIL, country: country, pcard: pcard, bcard: bcard, pimgHTML: pimgHTML, photos: photos, tileFallback: tileFallback,
   flag: flag, repaint: paint, halls: halls, boot: boot, toast: toast,
   cartAdd: cartAdd, cartRemove: cartRemove, cartCount: cartCount,
   subtotal: subtotal, shipFee: shipFee, freeFrom: freeFrom
