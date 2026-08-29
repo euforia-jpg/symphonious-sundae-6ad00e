@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="Mediterráneo">
+  <g fill="none" stroke="#171A2B" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 36V22a7 7 0 0 1 14 0v14"/>
+    <path d="M24 36V22a7 7 0 0 1 14 0v14"/>
+    <path d="M6 41h36"/>
+  </g>
+</svg>
