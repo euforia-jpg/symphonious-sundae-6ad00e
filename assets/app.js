@@ -227,26 +227,113 @@ function tileFallback(img) {
   box.style.setProperty('--h', HUE[cat] || 32);
   box.innerHTML = tileInner(cat);
 }
-function pimgHTML(p, extra) {
+function pimgHTML(p, extra, inner) {
+  inner = inner || '';
   var ph = photos(p);
   if (ph.length) {
     /* data-mp: 파일이 아직 폴더에 없으면 관리자 보관함의 미리보기로 바꿔 끼웁니다 (media.js).
        그것도 없으면 색 타일로 되돌립니다 — 손님에게 깨진 그림을 보이지 않습니다. */
     return '<div class="pimg has-img' + (extra || '') + '" style="--h:' + HUE[p.cat] + '">' +
-      '<img src="' + ph[0] + '" data-mp="' + ph[0] + '" data-cat="' + p.cat + '" alt="" loading="lazy" decoding="sync"></div>';
+      '<img src="' + ph[0] + '" data-mp="' + ph[0] + '" data-cat="' + p.cat + '" alt="" loading="lazy" decoding="sync">' + inner + '</div>';
   }
-  return '<div class="pimg' + (extra || '') + '" style="--h:' + HUE[p.cat] + '">' + tileInner(p.cat) + '</div>';
+  return '<div class="pimg' + (extra || '') + '" style="--h:' + HUE[p.cat] + '">' + tileInner(p.cat) + inner + '</div>';
 }
 function priceHTML(p) {
   if (!p.eur) return '<div class="price">' + t('pd.ask') + '</div>';
   return '<div class="price">' + fmt(p.eur) + '</div><div class="alt">' + fmtAlt(p.eur) + '</div>';
 }
-function pcard(p) {
+/* ---------- 목록 섞기 ----------
+   같은 상품이 늘 맨 앞이면 뒤쪽 상품은 아무도 보지 않습니다.
+   화면을 열 때마다 순서를 바꿔 모든 상품에 앞자리를 나눠 줍니다.
+   보고 있는 도중에 바꾸지는 않습니다 — 손님이 보던 자리를 잃습니다. */
+function shuffle(list) {
+  var a = list.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+/* ---------- 배지 ----------
+   NEW·BEST 는 광고 문구가 아니라 사실입니다. 아무 상품에나 붙이면 손님을 속이는 것이 되고,
+   한국 전자상거래법·표시광고법과 EU 소비자보호 규정 모두 이런 표시를 금지합니다.
+   그래서 관리자 대쉬보드에 넣은 진짜 값에서만 나옵니다.
+     NEW  = 등록일(since)이 최근 45일 안
+     BEST = 이번 달 판매 수량(soldM)이 가장 많은 상품 */
+var NEW_DAYS = 45;
+function isNew(p) {
+  if (!p.since) return false;
+  var d = new Date(String(p.since) + 'T00:00:00');
+  if (isNaN(d.getTime())) return false;
+  return (Date.now() - d.getTime()) / 86400000 <= NEW_DAYS;
+}
+var _best;
+function bestId() {
+  if (_best !== undefined) return _best;
+  var top = null;
+  for (var i = 0; i < P.length; i++) {
+    var p = P[i];
+    if (p.hidden) continue;
+    var n = +p.soldM || 0;
+    if (n <= 0) continue;
+    if (!top || n > (+top.soldM || 0)) top = p;
+  }
+  _best = top ? String(top.id) : null;
+  return _best;
+}
+function badgeOf(p) {
+  /* BEST 는 손으로 붙일 수 없습니다 — 판매 수량이 실제로 1위인 상품만 받습니다.
+     NEW 는 등록일로 자동으로 붙고, 대쉬보드에서 손으로 켜 둘 수도 있습니다. */
+  if (String(p.id) === bestId()) return 'best';
+  if (p.badge === 'new' || isNew(p)) return 'new';
+  return '';
+}
+/* 사진 오른쪽 아래에 붙는 "이번 달 N개 판매". 0 이면 아예 안 붙습니다. */
+function soldPill(n) {
+  var bits = t('card.sold').split('{0}');
+  return '<span class="sold" data-n="' + n + '">' +
+    (bits[0] ? '<span>' + esc(bits[0]) + '</span>' : '') +
+    '<b>0</b>' +
+    (bits[1] ? '<span>' + esc(bits[1]) + '</span>' : '') + '</span>';
+}
+/* 화면에 들어오면 0 에서 실제 숫자까지 올라갑니다 (숫자 자체는 사실 그대로입니다) */
+function countUp(root) {
+  var els = (root || document).querySelectorAll('.sold[data-n]');
+  if (!els.length) return;
+  var slow = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var run = function (el) {
+    if (el._up) return; el._up = 1;
+    var n = +el.getAttribute('data-n') || 0, b = el.querySelector('b');
+    if (slow) { b.textContent = n.toLocaleString(); return; }
+    var t0 = 0;
+    var step = function (ts) {
+      if (!t0) t0 = ts;
+      var k = Math.min(1, (ts - t0) / 900);
+      b.textContent = Math.round(n * (1 - Math.pow(1 - k, 3))).toLocaleString();
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  };
+  if (!window.IntersectionObserver) {
+    for (var i = 0; i < els.length; i++) run(els[i]);
+    return;
+  }
+  var io = new IntersectionObserver(function (ents) {
+    for (var k = 0; k < ents.length; k++) {
+      if (ents[k].isIntersecting) { run(ents[k].target); io.unobserve(ents[k].target); }
+    }
+  }, { threshold: 0.35 });
+  for (var j = 0; j < els.length; j++) io.observe(els[j]);
+}
+
+function pcard(p, i) {
   var b = brand(p.brand);
+  var bg = badgeOf(p), sold = +p.soldM || 0;
   var bd = '<span class="bdg eu">' + country(p) + '</span>';
-  if (p.badge) bd += '<span class="bdg ' + p.badge + '">' + (p.badge === 'new' ? 'NEW' : 'BEST') + '</span>';
-  return '<a class="pcard" href="' + link('product.html', { id: p.id }) + '">' +
-    pimgHTML(p) +
+  if (bg) bd += '<span class="bdg ' + bg + ' flash">' + (bg === 'new' ? 'NEW' : 'BEST') + '</span>';
+  return '<a class="pcard pop" style="--i:' + ((i || 0) % 12) + '" href="' + link('product.html', { id: p.id }) + '">' +
+    pimgHTML(p, '', sold > 0 ? soldPill(sold) : '') +
     '<div class="body"><div class="brand">' + esc(b.name) + '</div>' +
     '<div class="name">' + esc(nm(p)) + '</div>' +
     '<div class="tag">' + esc(tg(p)) + '</div>' +
@@ -370,6 +457,7 @@ function paint() {
   contactFab();
   RENDER();
   if (window.MEDIA) window.MEDIA.hydrate(document);
+  countUp(document);
   syncUrl();
 }
 /* 주소창만 조용히 맞춰 둡니다. 페이지를 다시 불러오지 않으므로
@@ -478,6 +566,7 @@ window.ME = {
   MAIL: MAIL, POL: POL, PAYM: PAYM, CARR: CARR, CT: CT, pt: pt, payOn: payOn,
   country: country, pcard: pcard, bcard: bcard, pimgHTML: pimgHTML, photos: photos, tileFallback: tileFallback,
   flag: flag, repaint: paint, halls: halls, boot: boot, toast: toast,
+  shuffle: shuffle, badgeOf: badgeOf, isNew: isNew, countUp: countUp,
   cartAdd: cartAdd, cartRemove: cartRemove, cartCount: cartCount,
   subtotal: subtotal, shipFee: shipFee, freeFrom: freeFrom,
   SHIP: SHIP, cartKg: cartKg, billKg: billKg, shipEUR: shipEUR, shipUnknown: shipUnknown

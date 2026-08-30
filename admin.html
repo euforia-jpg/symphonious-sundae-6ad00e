@@ -576,10 +576,9 @@ function rowHTML(p) {
     '<td><input class="xs" style="width:88px;text-align:left" data-f="g" value="' + esc(p.g || '') + '" placeholder="500 ml"></td>' +
     '<td><input class="xs" style="width:66px" type="number" min="0" step="0.05" data-f="kg" value="' + (p.kg || '') + '" placeholder="kg"></td>' +
     '<td><input class="xs" type="number" min="0" step="1" data-f="stock" value="' + (p.stock == null ? '' : p.stock) + '"></td>' +
-    '<td><select class="s" style="width:96px" data-f="badge">' +
-        '<option value=""' + (!p.badge ? ' selected' : '') + '>—</option>' +
-        '<option value="new"' + (p.badge === 'new' ? ' selected' : '') + '>NEW</option>' +
-        '<option value="best"' + (p.badge === 'best' ? ' selected' : '') + '>BEST</option></select></td>' +
+    '<td><select class="s" style="width:96px" data-f="badge" title="BEST 는 이번 달 판매 수량으로 자동으로 정해집니다">' +
+        '<option value=""' + (p.badge !== 'new' ? ' selected' : '') + '>—</option>' +
+        '<option value="new"' + (p.badge === 'new' ? ' selected' : '') + '>NEW</option></select></td>' +
     '<td>' +
       (p.hidden ? '<span class="pill warn" style="margin:1px 2px 1px 0">숨김</span>' : '') +
       iss.map(function (s) { return '<span class="pill bad" style="margin:1px 2px 1px 0">' + s + '</span>'; }).join('') +
@@ -889,11 +888,19 @@ function vEdit() {
       '<label class="fld"><span>배송 무게 kg <b style="color:var(--bad)">*</b></span>' +
         '<input id="e_kg" type="number" min="0" step="0.05" value="' + (p.kg || '') + '" placeholder="1.2">' +
         '<span class="hint" style="margin:4px 0 0">포장까지 포함한 실제 무게입니다. 배송비 계산에 씁니다.</span></label>' +
+      '<label class="fld"><span>등록일 (NEW 배지)</span>' +
+        '<input id="e_since" type="date" value="' + esc(p.since || '') + '">' +
+        '<span class="hint" style="margin:4px 0 0">이 날부터 45일 동안 손님 화면에 NEW 가 붙습니다. 비워 두면 안 붙습니다.</span></label>' +
+      '<label class="fld"><span>이번 달 판매 수량</span>' +
+        '<input id="e_soldM" type="number" min="0" step="1" value="' + (p.soldM || '') + '" placeholder="0">' +
+        '<span class="hint" style="margin:4px 0 0">실제로 팔린 수량만 넣으십시오. 사진 오른쪽 아래에 그대로 보이고, ' +
+        '가장 많이 팔린 상품에 BEST 가 자동으로 붙습니다. 0 이면 아무것도 안 보입니다.</span></label>' +
       '<label class="fld"><span>재고</span><input id="e_stock" type="number" min="0" value="' + (p.stock || 0) + '"></label>' +
-      '<label class="fld"><span>배지</span><select id="e_badge">' +
-        '<option value=""' + (!p.badge ? ' selected' : '') + '>—</option>' +
-        '<option value="new"' + (p.badge === 'new' ? ' selected' : '') + '>NEW</option>' +
-        '<option value="best"' + (p.badge === 'best' ? ' selected' : '') + '>BEST</option></select></label>' +
+      '<label class="fld"><span>NEW 배지</span><select id="e_badge">' +
+        '<option value=""' + (p.badge !== 'new' ? ' selected' : '') + '>안 붙임 (등록일로 자동)</option>' +
+        '<option value="new"' + (p.badge === 'new' ? ' selected' : '') + '>계속 붙여 두기</option></select>' +
+        '<span class="hint" style="margin:4px 0 0"><b>BEST 는 여기서 못 붙입니다.</b> 이번 달 판매 수량이 가장 많은 상품에 자동으로 붙습니다 — ' +
+        '실제로 안 팔린 상품에 BEST 를 붙이는 것은 한국 표시광고법·EU 소비자보호 규정에 걸립니다.</span></label>' +
       '<label class="fld"><span>원산지 표기</span><input id="e_origin" value="' + esc(p.origin || '') + '" placeholder="Jaén, ES"></label>' +
       '<label class="fld"><span>원산지 보호 명칭 (없으면 비움)</span><input id="e_dop" value="' + esc(p.dop || '') + '" placeholder="D.O.P. …"></label>' +
     '</div></div>' +
@@ -1058,6 +1065,7 @@ function readEdit() {
   var o = { hall: v('e_hall'), cat: v('e_cat'), brand: v('e_brand'),
             eur: v('e_eur') ? Math.round(parseFloat(v('e_eur')) * 100) / 100 : 0,
             g: v('e_g'), kg: parseFloat(v('e_kg')) || 0, stock: parseInt(v('e_stock'), 10) || 0,
+            since: v('e_since'), soldM: parseInt(v('e_soldM'), 10) || 0,
             badge: v('e_badge'), origin: v('e_origin'), dop: v('e_dop') };
   FIELDS.forEach(function (f) { o[f.k] = {}; });
   document.querySelectorAll('[data-e]').forEach(function (el) {
@@ -2250,6 +2258,8 @@ function buildDataJs() {
     if (c.imgs && c.imgs.length) c.img = c.imgs[0];            // 목록 화면은 img 한 장만 씁니다
     if (!c.img) delete c.img;
     if (!c.hidden) delete c.hidden;
+    if (!c.since) delete c.since;
+    if (!c.soldM) delete c.soldM;
     if (!c.dop) delete c.dop;
     if (!c.origin) delete c.origin;
     if (!c.badge) delete c.badge;
