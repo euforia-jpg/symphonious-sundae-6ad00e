@@ -68,7 +68,22 @@ var P = window.PRODUCTS, B = window.BRANDS;
     var o = ov.p[P[i].id];
     if (o) for (var k2 in o) P[i][k2] = o[k2];
   }
-  if (ov.add) for (var j = 0; j < ov.add.length; j++) P.push(ov.add[j]);
+  /* 새로 넣은 상품은 아직 data.js 에 없을 때만 얹습니다.
+     이미 올라가서 data.js 에 들어간 뒤에도 얹으면 같은 상품이 두 개로 보입니다. */
+  if (ov.add) {
+    var key = function (x) {
+      var n = (x.name && (x.name.ko || x.name.en || x.name.es)) || '';
+      return String(n).replace(/\s+/g, '').toLowerCase();
+    };
+    var live = {};
+    for (var m = 0; m < P.length; m++) live[key(P[m])] = 1;
+    for (var j = 0; j < ov.add.length; j++) {
+      var k3 = key(ov.add[j]);
+      if (k3 && live[k3]) continue;
+      live[k3] = 1;
+      P.push(ov.add[j]);
+    }
+  }
 })();
 var CATS = ['food', 'wine', 'craft', 'home', 'fashion', 'beauty'];
 var HUE = { food: 32, wine: 344, craft: 218, home: 168, fashion: 288, beauty: 8 };
@@ -179,7 +194,7 @@ function pimgHTML(p, extra) {
     /* data-mp: 파일이 아직 폴더에 없으면 관리자 보관함의 미리보기로 바꿔 끼웁니다 (media.js).
        그것도 없으면 색 타일로 되돌립니다 — 손님에게 깨진 그림을 보이지 않습니다. */
     return '<div class="pimg has-img' + (extra || '') + '" style="--h:' + HUE[p.cat] + '">' +
-      '<img src="' + ph[0] + '" data-mp="' + ph[0] + '" data-cat="' + p.cat + '" alt="" loading="lazy"></div>';
+      '<img src="' + ph[0] + '" data-mp="' + ph[0] + '" data-cat="' + p.cat + '" alt="" loading="lazy" decoding="sync"></div>';
   }
   return '<div class="pimg' + (extra || '') + '" style="--h:' + HUE[p.cat] + '">' + tileInner(p.cat) + '</div>';
 }
@@ -344,11 +359,20 @@ function boot(page, render) {
       deferredPrompt.userChoice.then(function () { deferredPrompt = null; paint(); });
       return;
     }
-    var lb = e.target.closest('[data-lang]');
+    /* <html> 에도 data-hall 을 붙여 두었습니다 (색을 바꾸려고).
+       그래서 그냥 closest 로 찾으면 화면 어디를 눌러도 <html> 이 걸려
+       페이지 전체를 다시 그렸습니다 — 누를 때마다 사진이 한 번 깜빡인 이유입니다.
+       진짜 누를 수 있는 것(단추·링크)만 골라 냅니다. */
+    var hit = function (sel) {
+      var el = e.target.closest(sel);
+      if (!el || el === document.documentElement || el === document.body) return null;
+      return el;
+    };
+    var lb = hit('[data-lang]');
     if (lb) { S.lang = lb.dataset.lang; LS.set('me_lang', S.lang); paint(); return; }
-    var cb = e.target.closest('[data-cur]');
+    var cb = hit('[data-cur]');
     if (cb) { S.cur = cb.dataset.cur; LS.set('me_cur', S.cur); paint(); return; }
-    var hb = e.target.closest('[data-hall]');
+    var hb = hit('[data-hall]');
     if (hb) {
       var prev = S.hall, next = hb.dataset.hall;
       S.hall = next; LS.set('me_hall', next);

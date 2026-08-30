@@ -271,6 +271,30 @@ var D = LS.get(KEY, null) || { p: {}, add: [], del: {}, auto: {}, fx: null, ts: 
 if (!D.p) D.p = {}; if (!D.add) D.add = [];
 if (!D.del) D.del = {}; if (!D.auto) D.auto = {};
 
+/* 새로 넣은 상품이 이미 data.js 에 들어갔는지 봅니다.
+   올리고 나서 [정리]를 안 누르면 임시 저장소에 그대로 남아,
+   data.js 의 정식 상품과 겹쳐 같은 상품이 두 개로 보입니다.
+   이름으로 맞춰 보고 이미 올라간 것은 임시 목록에서 빼 줍니다. */
+function keyOf(p) {
+  var n = (p.name && (p.name.ko || p.name.en || p.name.es)) || '';
+  return String(n).replace(/\s+/g, '').toLowerCase();
+}
+function alreadyLive(p) {
+  var k = keyOf(p);
+  if (!k) return false;
+  for (var i = 0; i < BASE_P.length; i++) if (keyOf(BASE_P[i]) === k) return true;
+  return false;
+}
+/* 아직 data.js 에 없는, 진짜로 새로운 것만 */
+function pendingAdds() { return D.add.filter(function (p) { return !alreadyLive(p); }); }
+
+/* 대쉬보드를 열 때 한 번 쓸어 냅니다 — 이미 올라간 것은 임시 목록에서 지웁니다. */
+(function sweep() {
+  var before = D.add.length;
+  D.add = pendingAdds();
+  if (D.add.length !== before) { D.ts = null; LS.set(KEY, D); }
+})();
+
 /* 변경분을 얹은 "지금 화면에 보이는" 상품 목록. 지운 상품은 빠집니다. */
 function merged() {
   var out = [];
@@ -282,7 +306,7 @@ function merged() {
     for (var k2 in o) c[k2] = o[k2];
     out.push(c);
   });
-  D.add.forEach(function (p) { out.push(p); });
+  pendingAdds().forEach(function (p) { out.push(p); });
   return out;
 }
 function fxNow() {
@@ -319,7 +343,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function 
 function nm(p) { return p.name && (p.name.ko || p.name.en) || '(이름 없음)'; }
 function krw(eur) { return Math.round(eur * fxNow().rate / 10) * 10; }
 function won(n) { return '₩' + n.toLocaleString('ko-KR'); }
-function dirty() { return Object.keys(D.p).length > 0 || D.add.length > 0 || Object.keys(D.del).length > 0 || !!D.fx; }
+function dirty() { return Object.keys(D.p).length > 0 || pendingAdds().length > 0 || Object.keys(D.del).length > 0 || !!D.fx; }
 function save() {
   D.ts = new Date().toISOString().slice(0, 16).replace('T', ' ');
   LS.set(KEY, D); paintBar();
@@ -380,7 +404,7 @@ function paintBar() {
   /* 편집 화면에는 그 화면 전용 바가 따로 있습니다. 겹치면 저장을 못 누릅니다. */
   if (!dirty() || TAB === 'edit') { bar.hidden = true; return; }
   bar.hidden = false;
-  var n = Object.keys(D.p).length, a = D.add.length, r = Object.keys(D.del).length;
+  var n = Object.keys(D.p).length, a = pendingAdds().length, r = Object.keys(D.del).length;
   var bits = [];
   if (n) bits.push('상품 ' + n + '개 수정');
   if (a) bits.push('새 상품 ' + a + '개');
@@ -637,39 +661,79 @@ function videoPreview(v) {
    data.js 는 사진을 가리키는데 파일이 폴더에 없으면 손님 화면에서 그림이 깨집니다.
    실제로 한 번 불러 보고 없는 것만 추려 줍니다. */
 var MISS = null;                      // null=아직 확인 안 함, [] = 다 있음
+var HAVE = {};                        // 그 중 보관함(이 브라우저)에는 들어 있는 것
 function checkFiles(cb) {
   var P = merged(), want = [];
   P.forEach(function (p) {
     photosOf(p).forEach(function (s) { if (want.indexOf(s) < 0) want.push(s); });
     if (p.video && p.video.kind === 'file' && p.video.src && want.indexOf(p.video.src) < 0) want.push(p.video.src);
   });
+  HAVE = {};
   if (!want.length) { MISS = []; cb && cb(MISS); return; }
   var left = want.length, miss = [];
+  var finish = function () {
+    /* 서버에 없는 파일이라도 보관함에 있으면 [반영·배포] 때 같이 올라갑니다.
+       정말 사라진 파일과 구별해야 대표님이 헛걱정을 안 하십니다. */
+    if (!miss.length) { MISS = miss; cb && cb(miss); return; }
+    var n = miss.length;
+    miss.forEach(function (path) {
+      window.MEDIA.get(path)
+        .then(function (rec) { if (rec && rec.data) HAVE[path] = 1; })
+        .catch(function () {})
+        .then(function () { if (--n === 0) { MISS = miss; cb && cb(miss); } });
+    });
+  };
   want.forEach(function (path) {
     fetch(path, { method: 'HEAD', cache: 'no-store' })
       .then(function (r) { if (!r.ok) miss.push(path); })
       .catch(function () { miss.push(path); })
-      .then(function () { if (--left === 0) { MISS = miss; cb && cb(miss); } });
+      .then(function () { if (--left === 0) finish(); });
   });
+}
+function missSplit() {
+  var soon = [], gone = [];
+  (MISS || []).forEach(function (s) { (HAVE[s] ? soon : gone).push(s); });
+  return { soon: soon, gone: gone };
 }
 function missBlock() {
   if (MISS === null) return '<div class="panel"><p class="hint" style="margin:0" id="missBox">사진 파일이 폴더에 들어 있는지 확인하는 중…</p></div>';
   if (!MISS.length) return '';
-  return '<div class="panel" style="border-color:color-mix(in srgb,var(--bad) 45%,var(--line))">' +
-    '<h3 style="color:var(--bad)">사진 파일 ' + MISS.length + '개가 폴더에 없습니다</h3>' +
-    '<p class="hint">이 상태로 배포하면 손님 화면에서 그림이 안 나옵니다. ' +
-      '아래 파일을 <span class="mono">mercado-euforia\\assets\\img</span> (영상은 <span class="mono">assets\\video</span>) 폴더에 넣어 주세요.</p>' +
-    '<ul class="check">' + MISS.slice(0, 12).map(function (s) {
-      return '<li><span class="pill bad">없음</span><span class="t"><b class="mono">' + esc(s.split('/').pop()) + '</b>' +
-        '<span class="mono">' + esc(s) + '</span></span></li>';
+  var s = missSplit(), out = '';
+  var listOf = function (arr, pill) {
+    return '<ul class="check">' + arr.slice(0, 12).map(function (x) {
+      return '<li><span class="pill ' + pill + '">' + (pill === 'bad' ? '없음' : '대기') + '</span>' +
+        '<span class="t"><b class="mono">' + esc(x.split('/').pop()) + '</b>' +
+        '<span class="mono">' + esc(x) + '</span></span></li>';
     }).join('') + '</ul>' +
-    (MISS.length > 12 ? '<p class="hint">…외 ' + (MISS.length - 12) + '개</p>' : '') +
-    '<div class="row" style="margin-top:12px"><button class="btn primary" id="mDlMiss">없는 파일만 내려받기</button>' +
-    '<button class="btn" id="mRecheck">다시 확인</button></div></div>';
+    (arr.length > 12 ? '<p class="hint">…외 ' + (arr.length - 12) + '개</p>' : '');
+  };
+
+  /* 1) 아직 안 올린 새 사진 — 잘못된 것이 아닙니다. 배포 때 같이 올라갑니다. */
+  if (s.soon.length) {
+    out += '<div class="panel">' +
+      '<h3>아직 사이트에 안 올라간 새 사진 ' + s.soon.length + '장</h3>' +
+      '<p class="hint">대쉬보드에서 방금 넣은 사진입니다. 지금은 이 브라우저 보관함에만 있습니다. ' +
+        '<b>[반영·배포]에서 [GitHub 에 바로 올리기]</b>를 누르면 상품 목록과 함께 자동으로 올라갑니다. ' +
+        '따로 하실 일은 없습니다.</p>' +
+      listOf(s.soon, 'es') +
+      '<div class="row" style="margin-top:12px"><button class="btn" id="mDlMiss">파일로 내려받기 (예전 방식)</button>' +
+      '<button class="btn" id="mRecheck">다시 확인</button></div></div>';
+  }
+  /* 2) 서버에도 보관함에도 없는 것 — 이건 진짜 문제입니다. */
+  if (s.gone.length) {
+    out += '<div class="panel" style="border-color:color-mix(in srgb,var(--bad) 45%,var(--line))">' +
+      '<h3 style="color:var(--bad)">되찾을 수 없는 사진 ' + s.gone.length + '장</h3>' +
+      '<p class="hint">상품은 이 사진을 가리키는데 서버에도, 이 브라우저 보관함에도 없습니다. ' +
+        '이 상태로 배포하면 손님 화면에서 색 타일로 보입니다. 해당 상품을 열어 사진을 다시 넣어 주세요.</p>' +
+      listOf(s.gone, 'bad') +
+      '<div class="row" style="margin-top:12px"><button class="btn" id="mRecheck">다시 확인</button></div></div>';
+  }
+  return out;
 }
 /* 보관함에 있는 것 중 폴더에 없는 것만 */
 function downloadMissing() {
   if (!MISS || !MISS.length) return toast('내려받을 것이 없습니다');
+  buildDataJs();                       // 정식 번호로 바뀐 사진 이름을 미리 정해 둡니다
   var i = 0, done = 0, gone = [];
   (function step() {
     if (i >= MISS.length) {
@@ -679,7 +743,7 @@ function downloadMissing() {
     }
     var path = MISS[i++];
     window.MEDIA.get(path).then(function (rec) {
-      if (rec && rec.data) { window.MEDIA.download(rec.data, path.split('/').pop()); done++; }
+      if (rec && rec.data) { window.MEDIA.download(rec.data, (RENAME[path] || path).split('/').pop()); done++; }
       else gone.push(path);
       setTimeout(step, 350);
     });
@@ -1108,7 +1172,7 @@ function vOrder() {
 
 /* ---------- 반영·배포 ---------- */
 function vDeploy() {
-  var n = Object.keys(D.p).length, a = D.add.length;
+  var n = Object.keys(D.p).length, a = pendingAdds().length;
   view(
     '<h2 class="sec">반영·배포</h2><p class="sub">여기서 고친 값을 손님 화면에 올리는 마지막 단계입니다.</p>' +
     missBlock() +
@@ -1137,7 +1201,7 @@ function vDeploy() {
     (dirty()
       ? '<div class="panel"><h3>지금 반영을 기다리는 것</h3><ul class="check">' +
         (n ? '<li><span class="pill warn">' + n + '</span><span class="t"><b>고친 상품</b><span>' + Object.keys(D.p).map(function (id) { var p = merged().filter(function (x) { return String(x.id) === String(id); })[0]; return p ? nm(p) : id; }).join(', ') + '</span></span></li>' : '') +
-        (a ? '<li><span class="pill warn">' + a + '</span><span class="t"><b>새로 추가한 상품</b><span>' + D.add.map(nm).join(', ') + '</span></span></li>' : '') +
+        (a ? '<li><span class="pill warn">' + a + '</span><span class="t"><b>새로 추가한 상품</b><span>' + pendingAdds().map(nm).join(', ') + '</span></span></li>' : '') +
         (Object.keys(D.del).length ? '<li><span class="pill bad">' + Object.keys(D.del).length + '</span><span class="t"><b>지운 상품</b>' +
           '<span>' + Object.keys(D.del).map(function (id) { var b0 = baseById(id); return b0 ? (b0.name.ko || b0.name.en) : id; }).join(', ') +
           ' — 내보낸 data.js 부터 빠집니다</span></span></li>' : '') +
@@ -1637,11 +1701,25 @@ function gatherFiles() {
       return window.MEDIA.get(p).then(function (rec) {
         if (rec && rec.data) {
           var comma = rec.data.indexOf(',');
-          files.push({ path: p, b64: rec.data.slice(comma + 1) });
+          files.push({ path: RENAME[p] || p, b64: rec.data.slice(comma + 1) });
         }
       });
     });
   }, Promise.resolve()).then(function () { return files; });
+}
+
+/* 올리고 나면 보관함의 사진도 정식 이름으로 옮깁니다.
+   보관함은 "서버 파일이 안 열릴 때 대신 보여 주는 예비본"이라, 이름이 어긋나면 소용이 없습니다. */
+function renameStored(map) {
+  var keys = []; for (var k in map) keys.push(k);
+  return keys.reduce(function (chain, k) {
+    return chain.then(function () {
+      return window.MEDIA.get(k).then(function (rec) {
+        if (!rec || !rec.data) return;
+        return window.MEDIA.put(map[k], rec.data).then(function () { return window.MEDIA.del(k); });
+      });
+    });
+  }, Promise.resolve()).catch(function () {});
 }
 
 function publish() {
@@ -1670,7 +1748,12 @@ function publish() {
         '<div class="row" style="margin-top:10px"><button class="btn primary" id="ghWait">반영됐는지 지켜보기</button>' +
         '<a class="btn" href="https://app.netlify.com/projects/symphonious-sundae-6ad00e/deploys" target="_blank" rel="noopener">배포 진행 보기 ↗</a></div>';
       btn.disabled = false;
+      renameStored(RENAME);
       MISS = null;
+      /* 방금 올린 파일에 모든 변경이 들어갔습니다. 임시 변경은 이제 역할이 끝났습니다.
+         남겨 두면 다음 번에 같은 상품이 두 개로 보입니다. 그래서 여기서 자동으로 지웁니다.
+         (새로 넣은 상품은 배포가 끝날 때까지만 잠깐 남았다가, data.js 에 나타나면 스스로 빠집니다.) */
+      D.p = {}; D.del = {}; D.fx = null; save();
       setTimeout(watchDeploy, 1200);
     })
     .catch(function (err) {
@@ -1794,8 +1877,31 @@ function clearSiteCache() {
 
 /* ---------- data.js 내보내기 ---------- */
 /* data.js 본문을 만듭니다. 내려받기와 GitHub 올리기가 같은 것을 씁니다. */
+/* 새 상품은 등록하는 순간에는 임시 번호(n26586)를 씁니다. 사진 이름도 그 번호로 지어집니다.
+   여기서 정식 번호를 받을 때 사진 이름까지 같이 바꿔 줍니다.
+   안 그러면 36번 상품의 사진이 n26586_01.jpg 로 영영 남습니다. */
+var RENAME = {};
+function renumberMedia(c, oldId, newId) {
+  var fix = function (s) {
+    if (!s) return s;
+    var pi = 'assets/img/' + oldId + '_';
+    if (s.indexOf(pi) === 0) { var a = 'assets/img/' + newId + '_' + s.slice(pi.length); RENAME[s] = a; return a; }
+    var pv = 'assets/video/' + oldId + '.';
+    if (s.indexOf(pv) === 0) { var b = 'assets/video/' + newId + '.' + s.slice(pv.length); RENAME[s] = b; return b; }
+    return s;
+  };
+  if (c.imgs && c.imgs.length) c.imgs = c.imgs.map(fix);
+  if (c.img) c.img = fix(c.img);
+  if (c.video && c.video.kind === 'file' && c.video.src) {
+    var v = {}; for (var k in c.video) v[k] = c.video[k];
+    v.src = fix(v.src); c.video = v;
+  }
+  return c;
+}
+
 function buildDataJs() {
   var P = merged(), f = fxNow();
+  _next = 0; RENAME = {};                 // 두 번 만들어도 번호가 같아야 합니다
   var today = new Date().toISOString().slice(0, 10);
   var lines = [];
   lines.push('/* Mediterráneo — 상품 데이터.');
@@ -1808,7 +1914,11 @@ function buildDataJs() {
   lines.push('window.PRODUCTS = [');
   P.forEach(function (p) {
     var c = {}; for (var k in p) c[k] = p[k];
-    if (String(c.id).indexOf('n') === 0) c.id = nextId();      // 새 상품에 정식 번호를 줍니다
+    if (String(c.id).indexOf('n') === 0) {                     // 새 상품에 정식 번호를 줍니다
+      var was = String(c.id);
+      c.id = nextId();
+      c = renumberMedia(c, was, c.id);                         // 사진 이름도 같이
+    }
     /* 빈 값은 파일에 넣지 않습니다 — 파일이 깔끔해야 나중에 손으로도 고칩니다 */
     if (!c.video) delete c.video;
     if (c.imgs && !c.imgs.length) delete c.imgs;
@@ -1841,7 +1951,7 @@ function exportData() {
   a.href = URL.createObjectURL(blob); a.download = 'data.js';
   document.body.appendChild(a); a.click();
   setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
-  toast('내보냈습니다 — assets 폴더에 덮어쓰세요');
+  toast('내보냈습니다 — assets 폴더에 덮어쓴 뒤 [올린 뒤 정리]를 눌러 주세요');
 }
 var _next = 0;
 function nextId() {

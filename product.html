@@ -47,7 +47,7 @@
     if (!it) return M.pimgHTML(p);
     if (it.kind === 'img') {
       return '<div class="pimg has-img" style="--h:' + M.HUE[p.cat] + '">' +
-        '<img src="' + it.src + '" data-mp="' + it.src + '" data-cat="' + p.cat + '" alt="' + M.esc(M.nm(p)) + '"></div>';
+        '<img src="' + it.src + '" data-mp="' + it.src + '" data-cat="' + p.cat + '" alt="' + M.esc(M.nm(p)) + '" decoding="sync"></div>';
     }
     var v = it.v, em = window.MEDIA.videoEmbedSrc(v);
     if (em) {
@@ -66,16 +66,38 @@
       '<div class="gal-thumbs">' + list.map(function (it, i) {
         var inner;
         if (it.kind === 'img') {
-          inner = '<img src="' + it.src + '" data-mp="' + it.src + '" alt="" loading="lazy">';
+          inner = '<img src="' + it.src + '" data-mp="' + it.src + '" alt="" loading="lazy" decoding="sync">';
         } else {
           var th = window.MEDIA.videoThumb(it.v);
-          inner = (th ? '<img src="' + th + '" alt="" loading="lazy">' : '<span class="vbg"></span>') +
+          inner = (th ? '<img src="' + th + '" alt="" loading="lazy" decoding="sync">' : '<span class="vbg"></span>') +
             '<span class="play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></span>';
         }
         return '<button type="button" class="gth' + (i === mIx ? ' on' : '') + '" data-m="' + i + '" ' +
           'aria-label="' + (it.kind === 'video' ? t('pd.video') : t('pd.photo') + ' ' + (i + 1)) + '" ' +
           'aria-pressed="' + (i === mIx) + '">' + inner + '</button>';
       }).join('') + '</div></div>';
+  }
+
+  /* 사진을 바꿔 볼 때 화면 전체를 다시 그리면, 큰 사진이 잠깐 사라졌다가
+     다시 나타나면서 한 번 깜빡입니다. 그래서 큰 사진 한 칸만 갈아 끼웁니다. */
+  function swapMain(i) {
+    var list = mediaList();
+    if (!list[i] || i === mIx) return;
+    var gal = document.querySelector('.gal');
+    if (!gal) { mIx = i; draw(); if (window.MEDIA) window.MEDIA.hydrate(document); return; }
+    mIx = i;
+    var box = document.createElement('div');
+    box.innerHTML = mainHTML(list[i]);
+    var fresh = box.firstElementChild;
+    var old = gal.querySelector('.pimg');
+    if (old) gal.replaceChild(fresh, old); else gal.insertBefore(fresh, gal.firstChild);
+    var ths = gal.querySelectorAll('.gth');
+    for (var k = 0; k < ths.length; k++) {
+      var on = (+ths[k].dataset.m === i);
+      ths[k].classList.toggle('on', on);
+      ths[k].setAttribute('aria-pressed', String(on));
+    }
+    if (window.MEDIA) window.MEDIA.hydrate(fresh);
   }
 
   function draw() {
@@ -147,7 +169,7 @@
 
   document.addEventListener('click', function (e) {
     var mt = e.target.closest('[data-m]');
-    if (mt) { mIx = +mt.dataset.m; draw(); if (window.MEDIA) window.MEDIA.hydrate(document); return; }
+    if (mt) { swapMain(+mt.dataset.m); return; }
     var q = e.target.closest('[data-q]');
     if (q) { qty = Math.max(1, qty + (+q.dataset.q)); document.getElementById('qn').textContent = qty; return; }
     if (e.target.closest('#addBtn')) { M.cartAdd(p.id, qty); M.toast(t('pd.added')); }
