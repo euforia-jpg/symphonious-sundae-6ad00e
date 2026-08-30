@@ -139,6 +139,7 @@
             '<div class="row"><dt>' + t('pd.origin') + '</dt><dd>' + M.esc(p.origin || b.loc) + '</dd></div>' +
             (p.dop ? '<div class="row"><dt>' + t('pd.dop') + '</dt><dd>' + M.esc(p.dop) + '</dd></div>' : '') +
             '<div class="row"><dt>' + t('pd.weight') + '</dt><dd>' + M.esc(p.g || t('pd.tbd')) + '</dd></div>' +
+            (p.kg ? '<div class="row"><dt>' + t('pd.shipKg') + '</dt><dd>' + p.kg + ' kg</dd></div>' : '') +
             (p.allergens && p.allergens.length
               ? '<div class="row"><dt>' + t('pd.allergen') + '</dt><dd>' + p.allergens.map(function (a) { return t('al.' + a); }).join(', ') + '</dd></div>'
               : '') +

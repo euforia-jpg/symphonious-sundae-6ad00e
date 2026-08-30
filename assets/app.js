@@ -163,11 +163,37 @@ function cartRemove(id) {
 function subtotal() {
   return S.cart.reduce(function (s, i) { var p = prod(i.id); return p ? s + unit(p.eur) * i.q : s; }, 0);
 }
-function freeFrom() { return S.cur === 'KRW' ? 120000 : 80; }
-function shipFee() {
-  if (!S.cart.length) return 0;              // 빈 장바구니에 배송비가 붙으면 안 됩니다
-  return subtotal() >= freeFrom() ? 0 : (S.cur === 'KRW' ? 18000 : 12.9);
+/* ---------- 국제배송비 ----------
+   무게로 매깁니다. 항공 화물이 실제로 그렇게 끊기기 때문입니다.
+   상품마다 kg (포장까지 포함한 실측 무게) 을 넣어 두면
+   장바구니 무게를 합쳐 kg 단위로 올림한 뒤 kg당 요금을 곱합니다.
+   1kg 미만도 1kg 으로 봅니다.  (요율은 policy.js 의 window.SHIPPING 에서 고칩니다) */
+function cartKg() {
+  var kg = 0, unknown = 0;
+  for (var i = 0; i < S.cart.length; i++) {
+    var it = S.cart[i], p = prod(it.id);
+    if (!p) continue;
+    var w = parseFloat(p.kg);
+    if (!w || w <= 0) { unknown++; continue; }      // 무게를 아직 안 넣은 상품
+    kg += w * it.q;
+  }
+  return { kg: Math.round(kg * 1000) / 1000, unknown: unknown };
 }
+function billKg() {                                 // 요금을 매기는 무게 (올림)
+  if (!S.cart.length) return 0;
+  var st = SHIP.step > 0 ? SHIP.step : 1;
+  var b = Math.ceil(cartKg().kg / st) * st;
+  var min = SHIP.minKg > 0 ? SHIP.minKg : st;
+  return Math.round(Math.max(b, min) * 1000) / 1000;
+}
+function shipEUR() {
+  if (!S.cart.length) return 0;
+  return Math.round(billKg() * (SHIP.perKg > 0 ? SHIP.perKg : 15) * 100) / 100;
+}
+function shipFee() { return unit(shipEUR()); }
+/* 무게를 아직 안 넣은 상품이 하나라도 있으면 금액을 확정해 말하지 않습니다 */
+function shipUnknown() { return cartKg().unknown > 0; }
+function freeFrom() { return 0; }                   // 금액 기준 무료배송은 쓰지 않습니다
 
 /* ---------- 공통 UI ---------- */
 /* 이 상품이 어느 나라 것인지.
@@ -412,6 +438,7 @@ var POL  = window.POLICY     || { updated: '', pay: [], ship: [], cancel: [] };
 var PAYM = window.PAYMETHODS || [];
 var CARR = window.CARRIERS   || [];
 var CT   = window.CONTACT    || { kakao: '', kakaoOn: false };
+var SHIP = window.SHIPPING   || { perKg: 15, step: 1, minKg: 1 };
 (function () {                                    // 관리자 미리보기
   var ov = LS.get('me_admin_v1', null);
   if (!ov) return;
@@ -419,6 +446,7 @@ var CT   = window.CONTACT    || { kakao: '', kakaoOn: false };
   if (ov.paym) PAYM = ov.paym;
   if (ov.carr) CARR = ov.carr;
   if (ov.ct) CT = ov.ct;
+  if (ov.ship) SHIP = ov.ship;
 })();
 /* 안내 글은 한국어·스페인어·영어만 채워 둡니다. 나머지 언어로 보는 손님에게는 영어가 나갑니다. */
 function pt(o) { if (!o) return ''; return o[S.lang] || o.en || o.ko || o.es || ''; }
@@ -451,6 +479,7 @@ window.ME = {
   country: country, pcard: pcard, bcard: bcard, pimgHTML: pimgHTML, photos: photos, tileFallback: tileFallback,
   flag: flag, repaint: paint, halls: halls, boot: boot, toast: toast,
   cartAdd: cartAdd, cartRemove: cartRemove, cartCount: cartCount,
-  subtotal: subtotal, shipFee: shipFee, freeFrom: freeFrom
+  subtotal: subtotal, shipFee: shipFee, freeFrom: freeFrom,
+  SHIP: SHIP, cartKg: cartKg, billKg: billKg, shipEUR: shipEUR, shipUnknown: shipUnknown
 };
 })();
