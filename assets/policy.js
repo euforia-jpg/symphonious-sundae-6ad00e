@@ -180,7 +180,7 @@ window.PAYMETHODS = [
    kakao 에 카카오톡 채널 주소(http://pf.kakao.com/_xxxxx/chat)를 넣으면
    노란 [카카오톡 문의] 단추가 같이 나옵니다. 비워 두면 메일 단추만 나옵니다. */
 window.CONTACT = {
-  kakao: '',
+  kakao: 'https://pf.kakao.com/_BSxggn/chat',
   kakaoOn: true
 };
 
