@@ -1,0 +1,42 @@
+Mediterráneo — 사이트 파일 (2026-08-30)
+
+■ 이 압축에 없는 것 — 일부러 뺐습니다
+   assets/data.js   (상품 목록)
+   assets/img/      (상품 사진)
+  이 둘은 대쉬보드가 관리합니다. 여기 든 옛날 사본을 올리면
+  지금 사이트에 있는 상품과 사진이 지워집니다. 절대 넣지 마세요.
+
+■ 올리는 법 (GitHub 웹)
+  1. github.com/euforia-jpg/symphonious-sundae-6ad00e 접속
+  2. [Add file] → [Upload files]
+  3. 이 압축을 푼 폴더에서 아래 20개를 통째로 끌어다 놓습니다
+       루트 15개  : index / shop / product / brands / brand / cart /
+                    thanks / policy / track / admin .html
+                    sw.js  netlify.toml  manifest.webmanifest
+                    robots.txt  sitemap.xml
+       assets 5개 : app.js  i18n.js  styles.css  policy.js  media.js
+     ※ assets 폴더는 폴더째 끌어다 놓으면 경로가 유지됩니다.
+  4. [Commit changes]  →  Netlify가 1~2분 안에 자동 배포
+
+■ 올린 뒤 확인 (주소창에 직접 쳐 보세요)
+     .../assets/policy.js      → 404 아니면 성공
+  이 파일이 두 번 빠져서 카카오톡 단추와 무게 배송비가 안 나왔습니다.
+
+■ 그다음, 대쉬보드에서
+  [상품] 탭   : 상품마다  배송 무게 kg / 이번 달 판매 수량 / 등록일
+                NEW 배지는 "안 붙임(등록일로 자동)" 으로
+  [반영·배포] : [GitHub 에 바로 올리기]
+
+  ※ 앞으로 policy.js 는 손으로 올리지 마세요.
+    대쉬보드에서 배포하면 data.js 와 함께 자동으로 새로 만들어져 올라갑니다.
+
+■ 이번에 들어간 것
+  - 상품 순서 섞기 + 카드 등장 효과
+  - NEW(등록일 자동) / BEST(이번 달 판매 1위 자동) + 배지 반짝임
+  - 사진 오른쪽 아래 "이번 달 N개 판매" (0에서 올라감, 0이면 안 보임)
+  - 국제배송비 = kg 올림 × 15유로, 최소 1kg
+  - 카카오톡 문의 단추 (pf.kakao.com/_BSxggn/chat)
+  - 이용안내(결제·배송·취소환불) / 배송 조회 페이지
+  - 장바구니 결제수단 선택 + 카드결제 자리(준비중)
+  - 없어진 상품이 장바구니에 남아 배송비만 붙던 문제 수정
+  - 클릭할 때마다 사진이 깜빡이던 문제 수정

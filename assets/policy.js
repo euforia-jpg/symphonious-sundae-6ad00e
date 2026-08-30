@@ -96,9 +96,9 @@ window.POLICY = {
     { h: { ko: '배송비',
            es: 'Gastos de envío',
            en: 'Shipping cost' },
-      b: { ko: '배송비는 장바구니에서 자동으로 계산되며, 일정 금액 이상 주문하시면 무료입니다. 부피가 크거나 무거운 상품은 별도 견적을 드릴 수 있습니다.',
-           es: 'El envío se calcula en la cesta y es gratuito a partir de cierto importe. Para artículos voluminosos o pesados podemos presupuestarlo aparte.',
-           en: 'Shipping is calculated in the cart and is free above a set order value. Bulky or heavy items may be quoted separately.' } }
+      b: { ko: '국제배송비는 무게로 계산합니다. 장바구니에 담으신 상품의 무게(포장 포함)를 합쳐 1kg 단위로 올린 뒤, 1kg당 15유로를 더합니다. 1kg 미만도 최소 1kg으로 봅니다. 예를 들어 합계가 1.4kg이면 2kg으로 보아 30유로입니다. 부피가 아주 크거나 무거운 상품은 따로 견적을 드릴 수 있습니다.',
+           es: 'El envío internacional se calcula por peso: sumamos el peso de los artículos (embalaje incluido), lo redondeamos al kilo superior y aplicamos 15 € por kilo, con un mínimo de 1 kg. Por ejemplo, 1,4 kg se factura como 2 kg: 30 €. Los artículos muy voluminosos o pesados pueden presupuestarse aparte.',
+           en: 'International shipping is charged by weight: we add up the weight of your items (packaging included), round up to the next kilo and charge €15 per kilo, with a 1 kg minimum. For example, 1.4 kg is billed as 2 kg — €30. Very bulky or heavy items may be quoted separately.' } }
   ],
 
   /* ───────────────── 취소 · 반품 · 환불 ───────────────── */
@@ -176,11 +176,17 @@ window.PAYMETHODS = [
             en: 'Visa · Mastercard · American Express. In preparation.' } }
 ];
 
+/* 국제배송비 규칙.
+   perKg = 1kg 당 요금(유로) · step = 올림 단위(kg) · minKg = 최소 청구 무게(kg)
+   지금 규칙: 무게를 kg 단위로 올린 뒤 kg당 15유로. 1kg 미만도 1kg 으로 봅니다.
+   상품마다 kg(포장 포함 실측 무게)을 넣어 두어야 계산됩니다. */
+window.SHIPPING = { perKg: 15, step: 1, minKg: 1 };
+
 /* 문의 창구. 화면 오른쪽 아래에 뜨는 단추입니다.
    kakao 에 카카오톡 채널 주소(http://pf.kakao.com/_xxxxx/chat)를 넣으면
    노란 [카카오톡 문의] 단추가 같이 나옵니다. 비워 두면 메일 단추만 나옵니다. */
 window.CONTACT = {
-  kakao: '',
+  kakao: 'https://pf.kakao.com/_BSxggn/chat',
   kakaoOn: true
 };
 

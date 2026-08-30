@@ -118,14 +118,26 @@
       return;
     }
 
-    var st = M.subtotal(), sf = M.shipFee();
+    /* 배송비는 무게로 매깁니다. 무게를 아직 안 넣은 상품이 하나라도 있으면
+       금액을 함부로 말하지 않고 "주문 후 안내" 로 둡니다. */
+    var st = M.subtotal(), ask = M.shipUnknown(), sf = ask ? 0 : M.shipFee();
+    var w = M.cartKg(), bw = M.billKg();
+    var num = function (n) { return (Math.round(n * 100) / 100).toString(); };
+
     body.innerHTML =
       '<div class="cart-grid"><div>' + S.cart.map(line).join('') + '</div>' +
       '<aside class="summary">' +
         '<div class="r"><span>' + t('cart.sub') + '</span><span>' + M.fmtN(st) + '</span></div>' +
-        '<div class="r"><span>' + t('cart.ship') + '</span><span>' + (sf ? M.fmtN(sf) : t('cart.free')) + '</span></div>' +
-        '<div class="r total"><span>' + t('cart.total') + '</span><span>' + M.fmtN(st + sf) + '</span></div>' +
-        (sf ? '<div class="note">' + t('cart.freeFrom').replace('{0}', M.fmtN(M.freeFrom())) + '</div>' : '') +
+        '<div class="r"><span>' + t('cart.ship') + '</span><span>' +
+          (ask ? t('cart.shipAsk') : M.fmtN(sf)) + '</span></div>' +
+        '<div class="r total"><span>' + t('cart.total') + '</span><span>' +
+          M.fmtN(st + sf) + (ask ? ' +' : '') + '</span></div>' +
+        (ask
+          ? '<div class="note">' + t('cart.shipAskNote') + '</div>'
+          : '<div class="note">' + t('cart.shipBasis')
+              .replace('{0}', num(w.kg)).replace('{1}', num(bw))
+              .replace('{2}', M.fmtN(M.unit(M.SHIP.perKg))) +
+            (w.kg < 1 ? '<br>' + t('cart.shipMin') : '') + '</div>') +
         '<div class="note">' + t('cart.duty') + '</div>' +
         '<div class="note">' + M.fxLine() + '<br><br>' + t('fx.note') + '</div>' +
       '</aside></div>';
@@ -146,9 +158,14 @@
       var p = M.prod(i.id);
       return '#' + p.id + ' ' + p.name.ko + ' × ' + i.q + ' (€' + p.eur.toFixed(2) + ')';
     }).join(' / ');
-    document.getElementById('fTotal').value = '€' + (S.cart.reduce(function (s, i) {
+    var eur = S.cart.reduce(function (s, i) {
       var p = M.prod(i.id); return p ? s + p.eur * i.q : s;
-    }, 0)).toFixed(2) + ' + ' + t('cart.ship');
+    }, 0);
+    document.getElementById('fTotal').value =
+      '상품 €' + eur.toFixed(2) +
+      (ask ? ' + 배송비 (무게 확인 필요)'
+           : ' + 배송 €' + M.shipEUR().toFixed(2) + ' (' + num(w.kg) + 'kg → ' + num(bw) + 'kg)' +
+             ' = €' + (eur + M.shipEUR()).toFixed(2));
     document.getElementById('fLang').value = S.lang;
 
     drawPay();
