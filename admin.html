@@ -278,6 +278,7 @@ var BASE_P = window.PRODUCTS, BASE_B = window.BRANDS;
 var BASE_POL  = window.POLICY     || { updated: '', pay: [], ship: [], cancel: [] };
 var BASE_PAYM = window.PAYMETHODS || [];
 var BASE_CARR = window.CARRIERS   || [];
+var BASE_CT   = window.CONTACT    || { kakao: '', kakaoOn: true };
 var BASE_FX = { base: window.FX.base, buffer: window.FX.buffer, at: window.FX.at, source: window.FX.source };
 
 /* 저장된 변경분 */
@@ -291,10 +292,12 @@ function clone(x) { return JSON.parse(JSON.stringify(x)); }
 function polNow()  { return D.pol  || BASE_POL; }
 function paymNow() { return D.paym || BASE_PAYM; }
 function carrNow() { return D.carr || BASE_CARR; }
+function ctNow()   { return D.ct   || BASE_CT; }
 function polEdit()  { if (!D.pol)  D.pol  = clone(BASE_POL);  return D.pol; }
 function paymEdit() { if (!D.paym) D.paym = clone(BASE_PAYM); return D.paym; }
 function carrEdit() { if (!D.carr) D.carr = clone(BASE_CARR); return D.carr; }
-function infoDirty() { return !!(D.pol || D.paym || D.carr); }
+function ctEdit()   { if (!D.ct)   D.ct   = clone(BASE_CT);   return D.ct; }
+function infoDirty() { return !!(D.pol || D.paym || D.carr || D.ct); }
 
 /* 새로 넣은 상품이 이미 data.js 에 들어갔는지 봅니다.
    올리고 나서 [정리]를 안 누르면 임시 저장소에 그대로 남아,
@@ -1319,7 +1322,7 @@ function ptx(o) { return (o && (o[ILANG] || '')) || ''; }
 
 function vInfo() {
   var pol = polNow(), rows = pol[ISEC] || [];
-  var paym = paymNow(), carr = carrNow();
+  var paym = paymNow(), carr = carrNow(), ct = ctNow();
 
   var langChips = LANGS.map(function (L) {
     return '<button class="chip' + (L === ILANG ? ' on' : '') + '" data-ilang="' + L + '">' + L.toUpperCase() + '</button>';
@@ -1388,6 +1391,25 @@ function vInfo() {
         '연결할 때 말씀해 주시면 이어 드리겠습니다.</div>' +
     '</div>' +
 
+    /* ── 문의 창구 ── */
+    '<div class="panel">' +
+      '<h3>문의 창구 (화면 오른쪽 아래 단추)</h3>' +
+      '<p class="hint">손님 화면 오른쪽 아래에 항상 떠 있는 단추입니다. 메일 단추는 늘 나오고, ' +
+        '<b>카카오톡 채널 주소를 넣으면</b> 노란 [카카오톡 문의] 단추가 같이 나옵니다. ' +
+        '주소를 비워 두면 카카오톡 단추는 안 나옵니다 — 깨진 링크를 손님에게 보이지 않기 위해서입니다.</p>' +
+      '<div class="polcard">' +
+        '<label class="row" style="align-items:center;gap:8px">' +
+          '<input type="checkbox" data-ctkon' + (ct.kakaoOn !== false ? ' checked' : '') + '>' +
+          '<b>카카오톡 문의 단추 쓰기</b>' +
+          (ct.kakao ? '<span class="pill ok">주소 있음</span>' : '<span class="pill warn">주소 없음</span>') +
+        '</label>' +
+        '<label class="fl">카카오톡 채널 상담 주소</label>' +
+        '<input data-ctk class="mono" value="' + esc(ct.kakao || '') + '" placeholder="http://pf.kakao.com/_xxxxxx/chat">' +
+        '<div class="hint">카카오톡 채널 관리자센터 → 채널 홈 → [채널 URL] 에서 <span class="mono">http://pf.kakao.com/_xxxxxx</span> 를 확인하고 뒤에 <span class="mono">/chat</span> 을 붙이면 바로 상담창이 열립니다.</div>' +
+        (ct.kakao ? '<div class="row" style="margin-top:10px"><button class="btn sm" id="ctTest">시험 열기</button></div>' : '') +
+      '</div>' +
+    '</div>' +
+
     /* ── 택배사 ── */
     '<div class="panel">' +
       '<h3>택배사 (배송 조회)</h3>' +
@@ -1446,6 +1468,7 @@ function buildPolicyJs() {
   L.push('   관리자 대쉬보드 [안내·결제] 탭에서 내보냈습니다: ' + pol.updated + ' */');
   L.push('window.POLICY = ' + JSON.stringify(pol, null, 1) + ';');
   L.push('window.PAYMETHODS = ' + JSON.stringify(paymNow(), null, 1) + ';');
+  L.push('window.CONTACT = ' + JSON.stringify(ctNow(), null, 1) + ';');
   L.push('window.CARRIERS = ' + JSON.stringify(carrNow(), null, 1) + ';');
   return L.join('\n') + '\n';
 }
@@ -1551,7 +1574,7 @@ document.addEventListener('click', function (e) {
   if (ilg) { ILANG = ilg.dataset.ilang; render(); return; }
   if (e.target.id === 'polReset') {
     if (!confirm('안내 문구 · 결제 수단 · 택배사를 마지막으로 배포한 상태로 되돌립니다.\n계속할까요?')) return;
-    delete D.pol; delete D.paym; delete D.carr; save(); render(); toast('되돌렸습니다'); return;
+    delete D.pol; delete D.paym; delete D.carr; delete D.ct; save(); render(); toast('되돌렸습니다'); return;
   }
   if (e.target.id === 'polAdd') {
     polEdit()[ISEC].push({ h: {}, b: {} }); save(); render();
@@ -1583,6 +1606,12 @@ document.addEventListener('click', function (e) {
     var ci = +cdel.dataset.cdel, cc = carrNow()[ci];
     if (!confirm('"' + ((cc.name && (cc.name.ko || cc.name.en)) || cc.id) + '" 을 목록에서 지웁니다. 계속할까요?')) return;
     carrEdit().splice(ci, 1); save(); render(); toast('지웠습니다'); return;
+  }
+  if (e.target.id === 'ctTest') {
+    var u = (ctNow().kakao || '').trim();
+    if (!u) return toast('주소가 비어 있습니다');
+    window.open(u, '_blank', 'noopener');
+    return;
   }
   var ctest = e.target.closest('[data-ctest]');
   if (ctest) {
@@ -1735,6 +1764,7 @@ document.addEventListener('input', function (e) {
     if (!m[ds.pmf]) m[ds.pmf] = {};
     m[ds.pmf][ILANG] = el.value; save(); return;
   }
+  if (ds.ctk !== undefined) { ctEdit().kakao = el.value.trim(); save(); return; }
   if (ds.cf) {
     var c = carrEdit()[+ds.ci]; if (!c) return;
     if (ds.cf === 'url') c.url = el.value;
@@ -1743,6 +1773,8 @@ document.addEventListener('input', function (e) {
   }
 });
 document.addEventListener('change', function (e) {
+  var kon = e.target.closest && e.target.closest('[data-ctkon]');
+  if (kon) { ctEdit().kakaoOn = !!kon.checked; save(); render(); return; }
   var on = e.target.closest && e.target.closest('[data-pmon]');
   if (!on) return;
   var m = paymEdit()[+on.dataset.pmon]; if (!m) return;
@@ -1999,7 +2031,7 @@ function publish() {
          남겨 두면 다음 번에 같은 상품이 두 개로 보입니다. 그래서 여기서 자동으로 지웁니다.
          (새로 넣은 상품은 배포가 끝날 때까지만 잠깐 남았다가, data.js 에 나타나면 스스로 빠집니다.) */
       D.p = {}; D.del = {}; D.fx = null;
-      delete D.pol; delete D.paym; delete D.carr;   // 안내 문구도 이제 파일에 들어갔습니다
+      delete D.pol; delete D.paym; delete D.carr; delete D.ct;   // 안내 문구도 이제 파일에 들어갔습니다
       save();
       setTimeout(watchDeploy, 1200);
     })

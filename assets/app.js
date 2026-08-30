@@ -140,6 +140,16 @@ function link(page, params) {
 }
 
 /* ---------- 장바구니 ---------- */
+/* 사라진 상품 걸러 내기.
+   상품을 지우거나 번호가 바뀌면, 손님 장바구니에는 그 번호가 그대로 남습니다.
+   그러면 화면에는 아무 상품도 안 보이는데 장바구니 숫자는 1이고
+   상품 금액은 0원인 채 배송비만 붙습니다. 들어올 때 한 번 걸러 냅니다. */
+function pruneCart() {
+  var before = S.cart.length;
+  S.cart = S.cart.filter(function (i) { return !!prod(i.id); });
+  if (S.cart.length !== before) LS.set('me_cart', S.cart);
+  return before - S.cart.length;
+}
 function cartCount() { return S.cart.reduce(function (s, i) { return s + i.q; }, 0); }
 function cartAdd(id, q) {
   var f = S.cart.filter(function (i) { return i.id === id; })[0];
@@ -154,7 +164,10 @@ function subtotal() {
   return S.cart.reduce(function (s, i) { var p = prod(i.id); return p ? s + unit(p.eur) * i.q : s; }, 0);
 }
 function freeFrom() { return S.cur === 'KRW' ? 120000 : 80; }
-function shipFee() { return subtotal() >= freeFrom() ? 0 : (S.cur === 'KRW' ? 18000 : 12.9); }
+function shipFee() {
+  if (!S.cart.length) return 0;              // 빈 장바구니에 배송비가 붙으면 안 됩니다
+  return subtotal() >= freeFrom() ? 0 : (S.cur === 'KRW' ? 18000 : 12.9);
+}
 
 /* ---------- 공통 UI ---------- */
 /* 이 상품이 어느 나라 것인지.
@@ -223,7 +236,8 @@ function bcard(b) {
 }
 
 function header(active) {
-  var links = [['index.html', 'nav.home'], ['shop.html', 'nav.shop'], ['brands.html', 'nav.brands']];
+  var links = [['index.html', 'nav.home'], ['shop.html', 'nav.shop'], ['brands.html', 'nav.brands'],
+               ['track.html', 'nav.track']];
   return '<div class="wrap head-in">' +
     '<div class="head-top">' +
     '<a class="lockup" href="' + link('index.html', {}) + '">' + MARK + '<span class="wm">Mediterráneo</span></a>' +
@@ -258,6 +272,8 @@ function footer() {
     '<span class="lockup">' + MARK + '<span class="wm">Mediterráneo</span></span>' +
     '<span>' + t('foot.rights') + '</span>' +
     '<span class="head-sp"></span>' +
+    '<a href="' + link('policy.html', {}) + '">' + t('nav.policy') + '</a>' +
+    '<a href="' + link('track.html', {}) + '">' + t('nav.track') + '</a>' +
     '<a href="mailto:' + MAIL + '">' + t('foot.contact') + ' · ' + MAIL + '</a>' +
     '</div>';
 }
@@ -325,6 +341,7 @@ function paint() {
   if (h) h.innerHTML = header(PAGE);
   if (f) f.innerHTML = footer();
   paintCartCount();
+  contactFab();
   RENDER();
   if (window.MEDIA) window.MEDIA.hydrate(document);
   syncUrl();
@@ -341,7 +358,9 @@ function syncUrl() {
 }
 function boot(page, render) {
   PAGE = page; RENDER = render;
+  var gone = pruneCart();                    // 없어진 상품을 먼저 걸러 냅니다
   paint();
+  if (gone) toast(t('cart.gone').replace('{0}', gone));
 
   document.addEventListener('click', function (e) {
     var pb = e.target.closest('#pickerBtn');
@@ -386,12 +405,50 @@ function boot(page, render) {
   });
 }
 
+/* ---------- 안내 문구 · 결제 수단 · 택배사 ----------
+   policy.js 에서 옵니다. 그 파일이 아직 없는 예전 배포와 섞여도 화면이 깨지지 않도록
+   없으면 빈 값으로 둡니다. */
+var POL  = window.POLICY     || { updated: '', pay: [], ship: [], cancel: [] };
+var PAYM = window.PAYMETHODS || [];
+var CARR = window.CARRIERS   || [];
+var CT   = window.CONTACT    || { kakao: '', kakaoOn: false };
+(function () {                                    // 관리자 미리보기
+  var ov = LS.get('me_admin_v1', null);
+  if (!ov) return;
+  if (ov.pol) POL = ov.pol;
+  if (ov.paym) PAYM = ov.paym;
+  if (ov.carr) CARR = ov.carr;
+  if (ov.ct) CT = ov.ct;
+})();
+/* 안내 글은 한국어·스페인어·영어만 채워 둡니다. 나머지 언어로 보는 손님에게는 영어가 나갑니다. */
+function pt(o) { if (!o) return ''; return o[S.lang] || o.en || o.ko || o.es || ''; }
+function payOn() { return PAYM.filter(function (m) { return m.on; }); }
+
+/* ---------- 문의 단추 (화면 오른쪽 아래) ----------
+   카카오톡 채널 주소를 넣어 두면 카카오톡 단추가 같이 나옵니다.
+   주소가 비어 있으면 메일 단추만 나옵니다 — 깨진 링크를 손님에게 보이지 않기 위해서입니다. */
+var IC_KAKAO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2c-4.8 0-8.7 3-8.7 6.8 0 2.4 1.6 4.5 4 5.7l-.9 3.4c-.1.3.2.5.5.4l4-2.6c.4 0 .7.1 1.1.1 4.8 0 8.7-3 8.7-6.8S16.8 3.2 12 3.2z"/></svg>';
+var IC_MAIL  = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3.8 7l8.2 6 8.2-6"/></svg>';
+
+function contactFab() {
+  var el = document.getElementById('mefab');
+  if (!el) { el = document.createElement('div'); el.id = 'mefab'; document.body.appendChild(el); }
+  var k = String(CT.kakao || '').trim();
+  var showK = k && CT.kakaoOn !== false;
+  el.innerHTML =
+    (showK ? '<a class="fb kko" href="' + esc(k) + '" target="_blank" rel="noopener">' +
+        IC_KAKAO + '<span>' + t('ct.kakao') + '</span></a>' : '') +
+    '<a class="fb ml" href="mailto:' + MAIL + '?subject=' + encodeURIComponent(t('ct.subject')) + '">' +
+      IC_MAIL + '<span>' + t('ct.mail') + '</span></a>';
+}
+
 /* ---------- 밖으로 ---------- */
 window.ME = {
   S: S, t: t, P: P, PV: PV, B: B, CATS: CATS, HUE: HUE, ICON: ICON, MARK: MARK,
   prod: prod, brand: brand, nm: nm, tg: tg, esc: esc, link: link,
   fmt: fmt, fmtAlt: fmtAlt, fmtN: fmtN, unit: unit, fxLine: fxLine, toKRW: toKRW,
-  MAIL: MAIL, country: country, pcard: pcard, bcard: bcard, pimgHTML: pimgHTML, photos: photos, tileFallback: tileFallback,
+  MAIL: MAIL, POL: POL, PAYM: PAYM, CARR: CARR, CT: CT, pt: pt, payOn: payOn,
+  country: country, pcard: pcard, bcard: bcard, pimgHTML: pimgHTML, photos: photos, tileFallback: tileFallback,
   flag: flag, repaint: paint, halls: halls, boot: boot, toast: toast,
   cartAdd: cartAdd, cartRemove: cartRemove, cartCount: cartCount,
   subtotal: subtotal, shipFee: shipFee, freeFrom: freeFrom
