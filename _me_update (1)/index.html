@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mediterráneo — 남유럽에서 한국까지, 항공 직송</title>
+<meta name="description" content="만든 사람과 만든 곳을 확인한 것만. 스페인·포르투갈·이탈리아에서 한국까지, 중간 없이 항공으로 보내 드립니다.">
+<meta property="og:title" content="Mediterráneo">
+<meta property="og:description" content="남유럽에서 한국까지, 항공 직송">
+<meta property="og:type" content="website">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1E4FD8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mediterráneo">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<header class="site-head"></header>
+<main id="main" class="wrap"></main>
+<footer class="site-foot"></footer>
+
+<script src="assets/i18n.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/policy.js"></script>
+<script src="assets/media.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  var M = window.ME, S = M.S, t = M.t;
+  M.boot('index.html', function () {
+    var es = S.hall === 'es';
+    var list = M.PV().filter(function (p) { return p.hall === S.hall; });
+    var picks = list.filter(function (p) { return p.badge; }).slice(0, 8);
+    var brands = M.B.filter(function (b) { return b.hall === S.hall; });
+
+    document.getElementById('main').innerHTML =
+      M.halls() +
+      (function () {
+        /* 글자가 순서대로 올라옵니다. --d 는 그 순서(지연)입니다.
+           지연을 animation-delay 로 따로 쓰면 빛 효과와 부딪히므로 변수로 넘깁니다. */
+        var d = 30;
+        var step = function () { d += 90; return '--d:' + d + 'ms'; };
+        var title = t(es ? 'home.titleES' : 'home.titleKR').split('\n').map(function (line) {
+          return '<span class="ln"><span class="rise sheen" style="' + step() + '">' + M.esc(line) + '</span></span>';
+        }).join('');
+        return '<section class="hero">' +
+          '<div class="blobs"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>' +
+          '<div class="grain"></div>' +
+          '<div class="tag rise" style="' + step() + '">' + t(es ? 'home.tagES' : 'home.tagKR') + '</div>' +
+          '<div class="rule rise" style="' + step() + '"></div>' +
+          '<h1>' + title + '</h1>' +
+          '<p class="rise" style="' + step() + '">' + t(es ? 'home.subES' : 'home.subKR') + '</p>' +
+          '<a class="cta rise" href="' + M.link('shop.html', {}) + '" style="' + step() + '">' + t('home.cta') +
+            '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>' +
+          '<div class="route rise" style="' + step() + '">' +
+            '<span>' + t(es ? 'home.rFromES' : 'home.rFromKR') + '</span><span class="ln2"></span>' +
+            '<svg class="pl" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15.5v-2l-8-4.5V3.7a1.7 1.7 0 0 0-3.4 0V9l-8 4.5v2l8-2.4v4.6l-2.4 1.6V21l4.1-1.1L15.3 21v-1.7L12.9 17.7V13.1z"/></svg>' +
+            '<span class="ln2"></span><span>' + t(es ? 'home.rToES' : 'home.rToKR') + '</span>' +
+          '</div>' +
+        '</section>';
+      })() +
+
+      /* 상품이 아직 없는 관이면 빈 칸을 늘어놓지 않고 안내만 보여 줍니다 */
+      (picks.length
+        ? '<section class="sec"><div class="sec-h"><div><h2>' + t('home.pick') + '</h2>' +
+          '<div class="sub">' + t('home.pickSub') + '</div></div>' +
+          '<a class="more" href="' + M.link('shop.html', {}) + '">' + t('home.more') + '</a></div>' +
+          '<div class="grid">' + picks.map(M.pcard).join('') + '</div></section>'
+        : '') +
+
+      (brands.length
+        ? '<section class="sec"><div class="sec-h"><div><h2>' + t('home.brands') + '</h2>' +
+          '<div class="sub">' + t('home.brandsSub') + '</div></div>' +
+          '<a class="more" href="' + M.link('brands.html', {}) + '">' + t('home.more') + '</a></div>' +
+          '<div class="brands">' + brands.map(M.bcard).join('') + '</div></section>'
+        : '') +
+
+      '<section class="sec"><div class="sec-h"><div><h2>' + t('home.all') + '</h2>' +
+        '<div class="sub">' + list.length + ' ' + t('cat.items') + '</div></div></div>' +
+        (list.length
+          ? '<div class="grid">' + list.map(M.pcard).join('') + '</div>'
+          : '<div class="empty"><div class="big">' + t('home.soon') + '</div>' +
+            '<p style="margin-top:10px;color:var(--muted)">' + t('home.soonSub') + '</p></div>') +
+      '</section>';
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>이용안내 — Mediterráneo</title>
+<meta name="description" content="결제, 배송, 취소와 환불 안내.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1E4FD8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mediterráneo">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<header class="site-head"></header>
+<main id="main" class="wrap"></main>
+<footer class="site-foot"></footer>
+
+<script src="assets/i18n.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/policy.js"></script>
+<script src="assets/media.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  var M = window.ME, t = M.t;
+  var SEC = [['pay', 'pol.pay'], ['ship', 'pol.ship'], ['cancel', 'pol.cancel']];
+  var open = (new URLSearchParams(location.search).get('s')) || 'pay';
+
+  function block(key) {
+    var rows = (M.POL[key] || []);
+    if (!rows.length) return '<p class="hint">준비 중입니다.</p>';
+    return '<div class="polbody">' + rows.map(function (r, i) {
+      return '<section class="polrow">' +
+        '<h3><span class="pn">' + (i + 1) + '</span>' + M.esc(M.pt(r.h)) + '</h3>' +
+        '<p>' + M.esc(M.pt(r.b)) + '</p></section>';
+    }).join('') + '</div>';
+  }
+
+  function draw() {
+    document.title = t('pol.title') + ' — Mediterráneo';
+    document.getElementById('main').innerHTML =
+      '<section class="sec" style="padding-top:26px">' +
+        '<div class="sec-h"><div><h2>' + t('pol.title') + '</h2>' +
+        '<div class="sub">' + t('pol.lede') + '</div></div></div>' +
+
+        '<div class="segbar" role="tablist">' + SEC.map(function (s) {
+          return '<button type="button" class="seg' + (s[0] === open ? ' on' : '') + '" data-s="' + s[0] + '" ' +
+            'role="tab" aria-selected="' + (s[0] === open) + '">' + t(s[1]) + '</button>';
+        }).join('') + '</div>' +
+
+        block(open) +
+
+        '<div class="polfoot">' +
+          '<p>' + t('pol.ask') + '</p>' +
+          '<p><a class="btn" href="mailto:' + M.MAIL + '">' + t('foot.contact') + ' · ' + M.MAIL + '</a>' +
+             '<a class="btn ghost" href="' + M.link('track.html', {}) + '" style="margin-left:8px">' + t('nav.track') + '</a></p>' +
+          (M.POL.updated ? '<p class="upd">' + t('pol.updated') + ' · ' + M.esc(M.POL.updated) + '</p>' : '') +
+        '</div>' +
+      '</section>';
+  }
+
+  M.boot('policy.html', draw);
+
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-s]');
+    if (!b) return;
+    open = b.dataset.s;
+    draw();
+    try {
+      var u = new URL(location.href); u.searchParams.set('s', open);
+      history.replaceState(null, '', u.pathname + u.search);
+    } catch (err) {}
+  });
+})();
+</script>
+</body>
+</html>
