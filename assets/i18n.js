@@ -166,6 +166,12 @@ window.T = {
 
 'card.sold':{ko:'이번 달 {0}개 판매',es:'{0} vendidos este mes',en:'{0} sold this month',fr:'{0} vendus ce mois-ci',de:'{0} diesen Monat verkauft',it:'{0} venduti questo mese',zh:'本月已售 {0} 件'},
 
+/* ── 히어로 옆 스케치 (검수 → 포장 → 항공 → 집) ── */
+'art.check':{ko:'검수',es:'Revisión',en:'Checked',fr:'Contrôle',de:'Geprüft',it:'Controllo',zh:'验货'},
+'art.pack':{ko:'포장',es:'Embalaje',en:'Packed',fr:'Emballage',de:'Verpackt',it:'Imballo',zh:'包装'},
+'art.fly':{ko:'항공 직송',es:'Vía aérea',en:'Flown direct',fr:'Par avion',de:'Per Luftfracht',it:'Via aerea',zh:'空运直送'},
+'art.door':{ko:'집 앞까지',es:'Hasta su puerta',en:'To your door',fr:'Jusqu’à votre porte',de:'Bis vor die Tür',it:'Fino alla porta',zh:'送到家门'},
+
 'foot.rights':{ko:'모든 상품은 원산지와 생산자를 확인한 뒤 등록합니다.',es:'Cada producto se verifica en origen antes de publicarse.',en:'Every product is verified at source before listing.',fr:'Chaque produit est vérifié à la source avant publication.',de:'Jedes Produkt wird vor der Listung an der Quelle geprüft.',it:'Ogni prodotto è verificato all’origine prima della pubblicazione.',zh:'所有商品均经产地与生产者核实后上架。'},
 'foot.contact':{ko:'문의',es:'Contacto',en:'Contact',fr:'Contact',de:'Kontakt',it:'Contatti',zh:'联系我们'},
 'app.install':{ko:'앱으로 설치',es:'Instalar app',en:'Install app',fr:'Installer l’app',de:'App installieren',it:'Installa app',zh:'安装应用'},

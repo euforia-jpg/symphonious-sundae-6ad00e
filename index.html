@@ -34,6 +34,104 @@
 <script>
 (function () {
   var M = window.ME, S = M.S, t = M.t;
+  /* ---------- 히어로 옆 스케치 ----------
+     검수 → 포장 → 항공 → 집. 선이 손으로 그리듯 차례로 이어집니다.
+     그림은 전부 선(stroke)이라 stroke-dashoffset 하나로 그렸다 지웠다 할 수 있습니다.
+     큰 화면에서만 나옵니다 (styles.css 의 900px 기준). */
+  function art() {
+    var lb = function (x, k, y) {
+      return '<text class="lb" x="' + x + '" y="' + (y || 298) + '">' + M.esc(t(k)) + '</text>';
+    };
+    return '<div class="hero-art" aria-hidden="true"><svg viewBox="0 56 480 274" preserveAspectRatio="xMidYMid meet">' +
+      '<path class="ground" data-draw d="M34 272H452"/>' +
+
+      /* ① 검수 — 오일 병과 돋보기 */
+      '<g class="st">' +
+        '<path data-draw d="M62 161h18v13c0 7 11 11 11 21v70a7 7 0 0 1-7 7H58a7 7 0 0 1-7-7v-70c0-10 11-14 11-21z"/>' +
+        '<path data-draw d="M51 207h40"/>' +
+        '<circle data-draw cx="112" cy="218" r="27"/>' +
+        '<path data-draw d="M131 237l16 16"/>' +
+        '<path class="tick" data-draw d="M101 218l7 8 15-18"/>' +
+      '</g>' +
+
+      /* ② 포장 — 상자와 테이프 */
+      '<g class="st">' +
+        '<path data-draw d="M184 214h76v58h-76z"/>' +
+        '<path data-draw d="M184 234h76"/>' +
+        '<path data-draw d="M222 214v20"/>' +
+        '<path data-draw d="M210 214h24"/>' +
+      '</g>' +
+
+      /* ③ 항공 — 궤적과 비행기 */
+      '<path class="arc" data-draw d="M268 206C320 108 380 106 424 172"/>' +
+      '<g class="st plane">' +
+        '<path data-draw d="M338 118l22 9-22 9 5-9z"/>' +
+      '</g>' +
+
+      /* ④ 집 */
+      '<g class="st">' +
+        '<path data-draw d="M378 244l32-27 32 27"/>' +
+        '<path data-draw d="M386 244v28h48v-28"/>' +
+        '<path data-draw d="M402 272v-18h16v18"/>' +
+      '</g>' +
+
+      lb(71, 'art.check') + lb(222, 'art.pack') + lb(352, 'art.fly', 88) + lb(410, 'art.door') +
+    '</svg></div>';
+  }
+
+  /* 선을 차례로 그립니다. 다 그리면 잠깐 두었다가 지우고 다시 그립니다.
+     길이는 브라우저에 물어봅니다 — 경로를 고쳐도 숫자를 손볼 필요가 없습니다. */
+  var artTimer = null;                            /* 화면을 다시 그려도 예전 타이머가 남지 않게 밖에 둡니다 */
+  function drawArt() {
+    if (artTimer) { clearTimeout(artTimer); artTimer = null; }
+    var box = document.querySelector('.hero-art');
+    if (!box) return;
+
+    var slow = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var lines = box.querySelectorAll('[data-draw]');
+    var labels = box.querySelectorAll('.lb');
+    var arc = box.querySelector('.arc');
+    var i;
+
+    for (i = 0; i < lines.length; i++) {
+      var el = lines[i], len = 0;
+      try { len = el.getTotalLength(); } catch (e) { len = 400; }
+      el.style.strokeDasharray = len;
+      el._len = len;
+    }
+    if (slow) {                                   /* 움직임을 꺼 둔 손님에게는 그냥 그려 둡니다 */
+      for (i = 0; i < lines.length; i++) { lines[i].style.transition = 'none'; lines[i].style.strokeDashoffset = 0; }
+      for (i = 0; i < labels.length; i++) labels[i].style.opacity = 1;
+      if (arc) arc.classList.add('march');
+      return;
+    }
+
+    var GAP = 210, DUR = 620;                     /* 한 선을 그리는 데 걸리는 시간과 간격 */
+    var last = 0;
+
+    var play = function (on) {
+      if (arc) arc.classList.remove('march');
+      for (var k = 0; k < lines.length; k++) {
+        var e2 = lines[k], d = on ? k * GAP : (lines.length - 1 - k) * 90;
+        e2.style.transition = 'stroke-dashoffset ' + (on ? DUR : 300) + 'ms cubic-bezier(.6,.05,.3,1) ' + d + 'ms';
+        e2.style.strokeDashoffset = on ? 0 : e2._len;
+        last = on ? d + DUR : d + 300;
+      }
+      for (var m = 0; m < labels.length; m++) {
+        labels[m].style.transition = 'opacity 500ms ease ' + (on ? (m + 1) * 700 : 0) + 'ms';
+        labels[m].style.opacity = on ? 1 : 0;
+      }
+      if (on && arc) setTimeout(function () { arc.classList.add('march'); }, last + 200);
+      artTimer = setTimeout(function () { play(!on); }, on ? last + 5200 : last + 500);
+    };
+
+    /* 처음엔 감춰 두고 시작합니다 */
+    for (i = 0; i < lines.length; i++) { lines[i].style.transition = 'none'; lines[i].style.strokeDashoffset = lines[i]._len; }
+    for (i = 0; i < labels.length; i++) { labels[i].style.transition = 'none'; labels[i].style.opacity = 0; }
+    box.getBoundingClientRect();                  /* 브라우저가 위 상태를 한 번 반영하게 합니다 */
+    setTimeout(function () { play(true); }, 500);
+  }
+
   M.boot('index.html', function () {
     var es = S.hall === 'es';
     var list = M.shuffle(M.PV().filter(function (p) { return p.hall === S.hall; }));
@@ -53,6 +151,7 @@
         return '<section class="hero">' +
           '<div class="blobs"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span></div>' +
           '<div class="grain"></div>' +
+          '<div class="hero-copy">' +
           '<div class="tag rise" style="' + step() + '">' + t(es ? 'home.tagES' : 'home.tagKR') + '</div>' +
           '<div class="rule rise" style="' + step() + '"></div>' +
           '<h1>' + title + '</h1>' +
@@ -64,6 +163,8 @@
             '<svg class="pl" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15.5v-2l-8-4.5V3.7a1.7 1.7 0 0 0-3.4 0V9l-8 4.5v2l8-2.4v4.6l-2.4 1.6V21l4.1-1.1L15.3 21v-1.7L12.9 17.7V13.1z"/></svg>' +
             '<span class="ln2"></span><span>' + t(es ? 'home.rToES' : 'home.rToKR') + '</span>' +
           '</div>' +
+          '</div>' +
+          art() +
         '</section>';
       })() +
 
@@ -89,6 +190,8 @@
           : '<div class="empty"><div class="big">' + t('home.soon') + '</div>' +
             '<p style="margin-top:10px;color:var(--muted)">' + t('home.soonSub') + '</p></div>') +
       '</section>';
+
+    drawArt();          /* 화면을 다 그린 뒤에 선을 그리기 시작합니다 */
   });
 })();
 </script>
