@@ -153,6 +153,7 @@ window.T = {
 
 /* ── 문의 단추 ── */
 'ct.kakao':{ko:'카카오톡 문의',es:'Consultar por KakaoTalk',en:'Ask on KakaoTalk',fr:'Demander sur KakaoTalk',de:'Per KakaoTalk fragen',it:'Chiedi su KakaoTalk',zh:'KakaoTalk 咨询'},
+'ct.open':{ko:'문의하기',es:'Contactar',en:'Contact us',fr:'Nous contacter',de:'Kontakt',it:'Contattaci',zh:'联系我们'},
 'ct.mail':{ko:'메일 문의',es:'Escríbenos',en:'Email us',fr:'Écrivez-nous',de:'E-Mail schreiben',it:'Scrivici',zh:'邮件咨询'},
 'ct.subject':{ko:'Mediterráneo 문의',es:'Consulta — Mediterráneo',en:'Enquiry — Mediterráneo',fr:'Demande — Mediterráneo',de:'Anfrage — Mediterráneo',it:'Richiesta — Mediterráneo',zh:'Mediterráneo 咨询'},
 'cart.gone':{ko:'더 이상 팔지 않는 상품 {0}개를 장바구니에서 뺐습니다.',es:'Hemos quitado {0} artículo(s) que ya no vendemos.',en:'We removed {0} item(s) we no longer sell from your cart.',fr:'Nous avons retiré {0} article(s) qui ne sont plus vendus.',de:'{0} nicht mehr verfügbare(r) Artikel wurde(n) entfernt.',it:'Abbiamo rimosso {0} articolo/i non più in vendita.',zh:'已从购物车移除 {0} 件已下架商品。'},

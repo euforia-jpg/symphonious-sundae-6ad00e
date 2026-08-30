@@ -487,6 +487,22 @@ function boot(page, render) {
     }
     if (pk && !pk.hasAttribute('hidden') && !e.target.closest('#picker')) pk.setAttribute('hidden', '');
 
+    /* 휴대폰의 문의 단추 — 누르면 펼치고, 딴 곳을 누르면 접습니다 */
+    var wrap = document.getElementById('mefab');
+    if (e.target.closest('#fabBtn')) {
+      if (wrap) {
+        var on = wrap.classList.toggle('open');
+        var b = document.getElementById('fabBtn');
+        if (b) b.setAttribute('aria-expanded', String(on));
+      }
+      return;
+    }
+    if (wrap && wrap.classList.contains('open') && !e.target.closest('#mefab')) {
+      wrap.classList.remove('open');
+      var b2 = document.getElementById('fabBtn');
+      if (b2) b2.setAttribute('aria-expanded', 'false');
+    }
+
     if (e.target.closest('#installBtn') && deferredPrompt) {
       deferredPrompt.prompt();
       deferredPrompt.userChoice.then(function () { deferredPrompt = null; paint(); });
@@ -546,16 +562,26 @@ function payOn() { return PAYM.filter(function (m) { return m.on; }); }
 var IC_KAKAO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.2c-4.8 0-8.7 3-8.7 6.8 0 2.4 1.6 4.5 4 5.7l-.9 3.4c-.1.3.2.5.5.4l4-2.6c.4 0 .7.1 1.1.1 4.8 0 8.7-3 8.7-6.8S16.8 3.2 12 3.2z"/></svg>';
 var IC_MAIL  = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="M3.8 7l8.2 6 8.2-6"/></svg>';
 
+var IC_X = '<svg class="x" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+
 function contactFab() {
   var el = document.getElementById('mefab');
   if (!el) { el = document.createElement('div'); el.id = 'mefab'; document.body.appendChild(el); }
   var k = String(CT.kakao || '').trim();
   var showK = k && CT.kakaoOn !== false;
+  el.className = showK ? 'has-kko' : '';
+  /* 휴대폰에서는 단추 두 개가 상품을 가립니다.
+     그래서 작은 동그란 단추 하나로 접어 두고, 누르면 펼쳐지게 합니다.
+     큰 화면에서는 접지 않고 둘 다 그대로 보입니다 (styles.css 의 680px 기준). */
   el.innerHTML =
-    (showK ? '<a class="fb kko" href="' + esc(k) + '" target="_blank" rel="noopener">' +
-        IC_KAKAO + '<span>' + t('ct.kakao') + '</span></a>' : '') +
-    '<a class="fb ml" href="mailto:' + MAIL + '?subject=' + encodeURIComponent(t('ct.subject')) + '">' +
-      IC_MAIL + '<span>' + t('ct.mail') + '</span></a>';
+    '<div class="fbs">' +
+      (showK ? '<a class="fb kko" href="' + esc(k) + '" target="_blank" rel="noopener">' +
+          IC_KAKAO + '<span>' + t('ct.kakao') + '</span></a>' : '') +
+      '<a class="fb ml" href="mailto:' + MAIL + '?subject=' + encodeURIComponent(t('ct.subject')) + '">' +
+        IC_MAIL + '<span>' + t('ct.mail') + '</span></a>' +
+    '</div>' +
+    '<button type="button" class="fbtoggle" id="fabBtn" aria-expanded="false" ' +
+      'aria-label="' + esc(t('ct.open')) + '">' + IC_KAKAO + IC_X + '</button>';
 }
 
 /* ---------- 밖으로 ---------- */
