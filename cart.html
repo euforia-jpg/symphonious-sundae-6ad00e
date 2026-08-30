@@ -36,6 +36,7 @@
       <input type="hidden" name="주문내역" id="fItems">
       <input type="hidden" name="합계" id="fTotal">
       <input type="hidden" name="언어" id="fLang">
+      <input type="hidden" name="결제수단" id="fPay">
 
       <h2 id="fTitle">주문 요청</h2>
       <p class="lede" id="fLede"></p>
@@ -70,6 +71,12 @@
           <textarea id="iMemo" name="요청사항"></textarea>
         </div>
       </div>
+
+      <!-- 결제 수단 · 약관 동의 (내용은 policy.js 에서 옵니다) -->
+      <div id="paySec" style="margin-top:22px"></div>
+      <label class="agree"><input type="checkbox" id="iAgree" required>
+        <span id="agreeTxt"></span></label>
+
       <button type="submit" class="btn primary block" id="fSubmit" style="margin-top:18px">주문 요청 보내기</button>
     </form>
   </section>
@@ -79,11 +86,13 @@
 
 <script src="assets/i18n.js"></script>
 <script src="assets/data.js"></script>
+<script src="assets/policy.js"></script>
 <script src="assets/media.js"></script>
 <script src="assets/app.js"></script>
 <script>
 (function () {
   var M = window.ME, S = M.S, t = M.t;
+  var PAY = null;                     // 손님이 고른 결제 수단
 
   function line(i) {
     var p = M.prod(i.id); if (!p) return '';
@@ -141,13 +150,58 @@
       var p = M.prod(i.id); return p ? s + p.eur * i.q : s;
     }, 0)).toFixed(2) + ' + ' + t('cart.ship');
     document.getElementById('fLang').value = S.lang;
+
+    drawPay();
+    var ag = document.getElementById('agreeTxt');
+    ag.innerHTML = M.esc(t('ord.agree')) + ' <a href="' + M.link('policy.html', { s: 'cancel' }) +
+      '" target="_blank" rel="noopener">' + t('ord.agreeLink') + ' ↗</a>';
+  }
+
+  /* 결제 수단. 아직 열지 않은 수단은 회색으로 "준비중"이라고 적어 두고 고를 수 없게 합니다.
+     대쉬보드 [안내·결제] 탭에서 켜면 바로 고를 수 있게 됩니다. */
+  function drawPay() {
+    var list = M.PAYM || [];
+    if (!list.length) { document.getElementById('paySec').innerHTML = ''; return; }
+    var on = list.filter(function (m) { return m.on; });
+    if (PAY == null && on.length) PAY = on[0].id;
+
+    document.getElementById('paySec').innerHTML =
+      '<h3 style="font-size:15px;font-weight:700">' + t('pay.title') + '</h3>' +
+      '<p class="hint" style="font-size:12.5px;color:var(--muted);margin-top:6px">' + t('pay.pick') + '</p>' +
+      '<div class="paylist">' + list.map(function (m) {
+        var off = !m.on;
+        return '<label class="paym' + (off ? ' off' : (m.id === PAY ? ' on' : '')) + '">' +
+          '<input type="radio" name="_pay" value="' + M.esc(m.id) + '"' +
+            (off ? ' disabled' : '') + (m.id === PAY ? ' checked' : '') + '>' +
+          '<span><span class="pm-n">' + M.esc(M.pt(m.name)) +
+            (off ? '<span class="pm-soon">' + t('pay.soon') + '</span>' : '') + '</span>' +
+          '<span class="pm-d">' + M.esc(M.pt(m.desc)) + '</span></span></label>';
+      }).join('') + '</div>' +
+      (list.some(function (m) { return !m.on; }) ? '<div class="note">' + t('pay.soonNote') + '</div>' : '');
+
+    setPayField();
+  }
+  function setPayField() {
+    var m = (M.PAYM || []).filter(function (x) { return x.id === PAY; })[0];
+    document.getElementById('fPay').value = m ? (m.name.ko || m.name.en || m.id) : '';
   }
 
   M.boot('cart.html', draw);
 
   document.addEventListener('click', function (e) {
     var r = e.target.closest('[data-rm]');
-    if (r) { M.cartRemove(+r.dataset.rm); draw(); }
+    if (r) { M.cartRemove(+r.dataset.rm); draw(); return; }
+  });
+  /* 결제 수단은 화면 전체를 다시 그리지 않고 그 칸만 바꿉니다 (누를 때 깜빡이지 않게). */
+  document.addEventListener('change', function (e) {
+    if (!e.target || e.target.name !== '_pay') return;
+    PAY = e.target.value;
+    var boxes = document.querySelectorAll('.paym');
+    for (var i = 0; i < boxes.length; i++) {
+      var inp = boxes[i].querySelector('input');
+      boxes[i].classList.toggle('on', !!inp && !inp.disabled && inp.value === PAY);
+    }
+    setPayField();
   });
 })();
 </script>

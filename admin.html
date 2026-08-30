@@ -180,6 +180,15 @@ summary:focus-visible{outline:2px solid color-mix(in srgb,var(--cobalt) 50%,tran
   background:var(--ink);color:var(--bg);padding:10px 17px;border-radius:10px;font-size:13.5px;font-weight:600;
   opacity:0;pointer-events:none;transition:.22s}
 .toast.on{opacity:1;transform:translate(-50%,0)}
+/* 안내·결제 탭 */
+.polcard{border:1px solid var(--line);border-radius:11px;padding:14px;margin-top:12px;background:var(--bg)}
+.polcard .fl{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:10px 0 4px}
+.polcard input,.polcard textarea{width:100%;background:var(--panel);border:1px solid var(--line);
+  border-radius:8px;padding:9px 11px;font-size:14px;font-family:inherit;color:inherit}
+.polcard textarea{resize:vertical;line-height:1.6}
+.chip{padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel);
+  font-size:12.5px;font-weight:700;color:var(--muted);cursor:pointer}
+.chip.on{background:var(--cobalt);border-color:var(--cobalt);color:#fff}
 .note{background:color-mix(in srgb,var(--warn) 9%,transparent);border:1px solid color-mix(in srgb,var(--warn) 28%,transparent);
   border-radius:10px;padding:11px 13px;font-size:12.5px;color:var(--ink2);margin:0 0 14px}
 .note b{color:var(--ink)}
@@ -234,6 +243,7 @@ summary:focus-visible{outline:2px solid color-mix(in srgb,var(--cobalt) 50%,tran
 
 <script src="assets/i18n.js"></script>
 <script src="assets/data.js"></script>
+<script src="assets/policy.js"></script>
 <script src="assets/media.js"></script>
 <script>
 (function () {
@@ -264,12 +274,27 @@ var CATS = ['food', 'wine', 'craft', 'home', 'fashion', 'beauty'];
 var CATNAME = { food: '식품', wine: '와인·주류', craft: '공예', home: '리빙', fashion: '패션', beauty: '뷰티' };
 
 var BASE_P = window.PRODUCTS, BASE_B = window.BRANDS;
+/* 안내 문구 · 결제 수단 · 택배사 (policy.js) */
+var BASE_POL  = window.POLICY     || { updated: '', pay: [], ship: [], cancel: [] };
+var BASE_PAYM = window.PAYMETHODS || [];
+var BASE_CARR = window.CARRIERS   || [];
 var BASE_FX = { base: window.FX.base, buffer: window.FX.buffer, at: window.FX.at, source: window.FX.source };
 
 /* 저장된 변경분 */
 var D = LS.get(KEY, null) || { p: {}, add: [], del: {}, auto: {}, fx: null, ts: null };
 if (!D.p) D.p = {}; if (!D.add) D.add = [];
 if (!D.del) D.del = {}; if (!D.auto) D.auto = {};
+
+/* 안내 문구는 통째로 보관합니다 (항목이 늘고 줄기 때문에 조각으로 나누면 오히려 어긋납니다).
+   손대기 전에는 null 이고, 한 번이라도 고치면 그때 복사본이 생깁니다. */
+function clone(x) { return JSON.parse(JSON.stringify(x)); }
+function polNow()  { return D.pol  || BASE_POL; }
+function paymNow() { return D.paym || BASE_PAYM; }
+function carrNow() { return D.carr || BASE_CARR; }
+function polEdit()  { if (!D.pol)  D.pol  = clone(BASE_POL);  return D.pol; }
+function paymEdit() { if (!D.paym) D.paym = clone(BASE_PAYM); return D.paym; }
+function carrEdit() { if (!D.carr) D.carr = clone(BASE_CARR); return D.carr; }
+function infoDirty() { return !!(D.pol || D.paym || D.carr); }
 
 /* 새로 넣은 상품이 이미 data.js 에 들어갔는지 봅니다.
    올리고 나서 [정리]를 안 누르면 임시 저장소에 그대로 남아,
@@ -343,7 +368,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function 
 function nm(p) { return p.name && (p.name.ko || p.name.en) || '(이름 없음)'; }
 function krw(eur) { return Math.round(eur * fxNow().rate / 10) * 10; }
 function won(n) { return '₩' + n.toLocaleString('ko-KR'); }
-function dirty() { return Object.keys(D.p).length > 0 || pendingAdds().length > 0 || Object.keys(D.del).length > 0 || !!D.fx; }
+function dirty() { return Object.keys(D.p).length > 0 || pendingAdds().length > 0 || Object.keys(D.del).length > 0 || !!D.fx || infoDirty(); }
 function save() {
   D.ts = new Date().toISOString().slice(0, 16).replace('T', ' ');
   LS.set(KEY, D); paintBar();
@@ -388,6 +413,7 @@ var TABS = [
   ['lang',  '번역'],
   ['fx',    '환율'],
   ['order', '주문'],
+  ['info',  '안내·결제'],
   ['deploy','반영·배포'],
   ['set',   '설정']
 ];
@@ -410,6 +436,7 @@ function paintBar() {
   if (a) bits.push('새 상품 ' + a + '개');
   if (r) bits.push('삭제 ' + r + '개');
   if (D.fx) bits.push('환율 변경');
+  if (infoDirty()) bits.push('안내·결제 수정');
   document.getElementById('saveMsg').innerHTML =
     '<span class="dot"></span><b>' + bits.join(' · ') + '</b> — 지금은 <b>내 브라우저에서만</b> 보입니다. 손님에게 반영하려면 내보내서 배포하세요.';
 }
@@ -1281,10 +1308,152 @@ function vSet() {
   );
 }
 
+/* =========================== 안내 · 결제 =========================== */
+/* 손님에게 보이는 결제·배송·취소/환불 문구, 결제 수단, 택배사 목록을 여기서 고칩니다.
+   글은 한국어·스페인어·영어만 채워도 됩니다 — 나머지 언어로 보는 손님에게는 영어가 나갑니다. */
+var PSEC = [['pay', '결제'], ['ship', '배송'], ['cancel', '취소 · 반품 · 환불']];
+var ISEC = 'pay';                       // 지금 보고 있는 갈래
+var ILANG = 'ko';                       // 지금 고치고 있는 언어
+
+function ptx(o) { return (o && (o[ILANG] || '')) || ''; }
+
+function vInfo() {
+  var pol = polNow(), rows = pol[ISEC] || [];
+  var paym = paymNow(), carr = carrNow();
+
+  var langChips = LANGS.map(function (L) {
+    return '<button class="chip' + (L === ILANG ? ' on' : '') + '" data-ilang="' + L + '">' + L.toUpperCase() + '</button>';
+  }).join('');
+
+  view(
+    '<h2 class="sec">안내 · 결제</h2>' +
+    '<p class="sub">손님이 [이용안내]와 장바구니에서 보는 내용입니다. 고친 뒤 <b>[반영·배포]</b>를 누르면 사이트에 올라갑니다.</p>' +
+
+    (infoDirty() ? '<div class="note" style="border-color:color-mix(in srgb,var(--warn) 40%,var(--line))">' +
+      '고친 내용이 아직 <b>내 브라우저에만</b> 있습니다. [반영·배포] 탭에서 올려 주세요. ' +
+      '<button class="btn sm" id="polReset">원래대로 되돌리기</button></div>' : '') +
+
+    /* ── 문구 ── */
+    '<div class="panel">' +
+      '<h3>안내 문구</h3>' +
+      '<div class="row" style="margin:10px 0 4px">' + PSEC.map(function (s) {
+        return '<button class="btn sm' + (s[0] === ISEC ? ' primary' : '') + '" data-isec="' + s[0] + '">' + s[1] + '</button>';
+      }).join('') + '</div>' +
+      '<div class="row" style="margin:10px 0"><span class="hint" style="margin:0">고칠 언어</span>' + langChips +
+        '<span class="hint" style="margin:0">· 한국어를 쓰신 뒤 [자동 번역]을 누르면 스페인어·영어가 채워집니다</span></div>' +
+
+      (rows.length ? rows.map(function (r, i) {
+        return '<div class="polcard">' +
+          '<div class="row" style="justify-content:space-between;align-items:center">' +
+            '<b class="mono">' + (i + 1) + ' / ' + rows.length + '</b>' +
+            '<span class="row">' +
+              '<button class="btn sm" data-pmv="' + i + '" data-dir="-1"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+              '<button class="btn sm" data-pmv="' + i + '" data-dir="1"' + (i === rows.length - 1 ? ' disabled' : '') + '>↓</button>' +
+              '<button class="btn sm" data-ptr="' + i + '">자동 번역</button>' +
+              '<button class="btn sm danger" data-pdel="' + i + '">지우기</button>' +
+            '</span></div>' +
+          '<label class="fl">제목</label>' +
+          '<input data-po="h" data-pi="' + i + '" value="' + esc(ptx(r.h)) + '" placeholder="예: 결제 수단">' +
+          '<label class="fl">본문</label>' +
+          '<textarea data-po="b" data-pi="' + i + '" rows="4" placeholder="손님에게 그대로 보이는 글입니다.">' + esc(ptx(r.b)) + '</textarea>' +
+          '<div class="hint">' + LANGS.filter(function (L) { return r.h && r.h[L]; }).map(function (L) { return L.toUpperCase(); }).join(' · ') +
+            ' 채워짐</div>' +
+        '</div>';
+      }).join('') : '<p class="hint">이 갈래에 아직 항목이 없습니다.</p>') +
+
+      '<div class="row" style="margin-top:12px"><button class="btn primary" id="polAdd">+ 항목 추가</button></div>' +
+    '</div>' +
+
+    /* ── 결제 수단 ── */
+    '<div class="panel">' +
+      '<h3>결제 수단</h3>' +
+      '<p class="hint">체크를 풀면 손님 화면에 <b>회색 "준비중"</b>으로 보이고 고를 수 없습니다. ' +
+        '카드 결제를 열 준비가 되면 체크만 켜 주시면 됩니다.</p>' +
+      paym.map(function (m, i) {
+        return '<div class="polcard">' +
+          '<label class="row" style="align-items:center;gap:8px">' +
+            '<input type="checkbox" data-pmon="' + i + '"' + (m.on ? ' checked' : '') + '>' +
+            '<b>' + esc((m.name && (m.name[ILANG] || m.name.ko || m.name.en)) || m.id) + '</b>' +
+            (m.on ? '<span class="pill ok">쓰는 중</span>' : '<span class="pill warn">준비중</span>') +
+            (m.via ? '<span class="hint" style="margin:0">· ' + esc(m.via) + '</span>' : '') +
+          '</label>' +
+          '<label class="fl">이름 (' + ILANG.toUpperCase() + ')</label>' +
+          '<input data-pmf="name" data-pmi="' + i + '" value="' + esc((m.name && m.name[ILANG]) || '') + '">' +
+          '<label class="fl">설명 (' + ILANG.toUpperCase() + ')</label>' +
+          '<input data-pmf="desc" data-pmi="' + i + '" value="' + esc((m.desc && m.desc[ILANG]) || '') + '">' +
+        '</div>';
+      }).join('') +
+      '<div class="note">카드 결제를 실제로 받으려면 결제대행사(Stripe) 계약과 결제 화면 연결이 따로 필요합니다. ' +
+        '여기 체크만 켜면 손님이 <b>고를 수 있는 상태</b>가 되지만 실제 결제창은 아직 뜨지 않습니다. ' +
+        '연결할 때 말씀해 주시면 이어 드리겠습니다.</div>' +
+    '</div>' +
+
+    /* ── 택배사 ── */
+    '<div class="panel">' +
+      '<h3>택배사 (배송 조회)</h3>' +
+      '<p class="hint">손님이 [배송 조회]에서 고르는 목록입니다. 주소의 <span class="mono">{n}</span> 자리에 운송장번호가 들어갑니다. ' +
+        '<b>한 번씩 눌러 보시고</b> 조회가 안 되는 곳은 주소를 고치거나 지워 주세요.</p>' +
+      carr.map(function (c, i) {
+        return '<div class="polcard">' +
+          '<div class="row" style="justify-content:space-between;align-items:center">' +
+            '<b class="mono">' + esc(c.id) + '</b>' +
+            '<span class="row">' +
+              '<button class="btn sm" data-ctest="' + i + '">시험 조회</button>' +
+              '<button class="btn sm danger" data-cdel="' + i + '">지우기</button>' +
+            '</span></div>' +
+          '<label class="fl">이름 (' + ILANG.toUpperCase() + ')</label>' +
+          '<input data-cf="name" data-ci="' + i + '" value="' + esc((c.name && c.name[ILANG]) || '') + '">' +
+          '<label class="fl">조회 주소</label>' +
+          '<input data-cf="url" data-ci="' + i + '" class="mono" value="' + esc(c.url || '') + '">' +
+        '</div>';
+      }).join('') +
+      '<div class="row" style="margin-top:12px"><button class="btn primary" id="carrAdd">+ 택배사 추가</button></div>' +
+    '</div>'
+  );
+}
+
+/* 안내 문구 편집 동작 */
+function polSet(field, i, val) {
+  var pol = polEdit(), r = pol[ISEC][i];
+  if (!r) return;
+  if (!r[field]) r[field] = {};
+  r[field][ILANG] = val;
+  save();
+}
+function polTranslate(i) {
+  var r = polNow()[ISEC][i];
+  if (!r) return;
+  var src = (r.h && r.h.ko) || (r.h && r.h[ILANG]) || '';
+  var srcB = (r.b && r.b.ko) || (r.b && r.b[ILANG]) || '';
+  if (!src && !srcB) return toast('먼저 한국어로 써 주세요');
+  var from = (r.h && r.h.ko) ? 'ko' : ILANG;
+  var to = ['es', 'en'].filter(function (L) { return L !== from; });
+  toast('번역하는 중…');
+  var jobs = [];
+  to.forEach(function (L) {
+    if (src) jobs.push(mmOne(src, from, L).then(function (o) { polEdit()[ISEC][i].h[L] = o; }));
+    if (srcB) jobs.push(mmOne(srcB, from, L).then(function (o) { polEdit()[ISEC][i].b[L] = o; }));
+  });
+  Promise.all(jobs).then(function () { save(); render(); toast('번역했습니다 — 눈으로 한 번 봐 주세요'); })
+    .catch(function (err) { toast('번역 실패: ' + (err.message || '')); });
+}
+
+function buildPolicyJs() {
+  var pol = clone(polNow());
+  pol.updated = new Date().toISOString().slice(0, 10);
+  var L = [];
+  L.push('/* Mediterráneo — 결제 · 배송 · 취소/환불 안내와 택배사 목록.');
+  L.push('   관리자 대쉬보드 [안내·결제] 탭에서 내보냈습니다: ' + pol.updated + ' */');
+  L.push('window.POLICY = ' + JSON.stringify(pol, null, 1) + ';');
+  L.push('window.PAYMETHODS = ' + JSON.stringify(paymNow(), null, 1) + ';');
+  L.push('window.CARRIERS = ' + JSON.stringify(carrNow(), null, 1) + ';');
+  return L.join('\n') + '\n';
+}
+
 /* =========================== 그리기 =========================== */
 function render() {
   paintTabs(); paintBar();
-  ({ home: vHome, prod: vProd, media: vMedia, edit: vEdit, lang: vLang, fx: vFx, order: vOrder, deploy: vDeploy, set: vSet }[TAB])();
+  ({ home: vHome, prod: vProd, media: vMedia, edit: vEdit, lang: vLang, fx: vFx, order: vOrder, info: vInfo, deploy: vDeploy, set: vSet }[TAB])();
   if (window.MEDIA) window.MEDIA.hydrate(document);
   if (MISS === null && (TAB === 'media' || TAB === 'deploy' || TAB === 'home')) {
     checkFiles(function () { if (TAB === 'media' || TAB === 'deploy' || TAB === 'home') render(); });
@@ -1374,6 +1543,55 @@ document.addEventListener('click', function (e) {
   if (e.target.id === 'mDlAll') { downloadAllMedia(); return; }
   if (e.target.id === 'mDlMiss') { downloadMissing(); return; }
   if (e.target.id === 'mRecheck') { MISS = null; render(); return; }
+
+  /* ── 안내 · 결제 ── */
+  var isec = e.target.closest('[data-isec]');
+  if (isec) { ISEC = isec.dataset.isec; render(); return; }
+  var ilg = e.target.closest('[data-ilang]');
+  if (ilg) { ILANG = ilg.dataset.ilang; render(); return; }
+  if (e.target.id === 'polReset') {
+    if (!confirm('안내 문구 · 결제 수단 · 택배사를 마지막으로 배포한 상태로 되돌립니다.\n계속할까요?')) return;
+    delete D.pol; delete D.paym; delete D.carr; save(); render(); toast('되돌렸습니다'); return;
+  }
+  if (e.target.id === 'polAdd') {
+    polEdit()[ISEC].push({ h: {}, b: {} }); save(); render();
+    var boxes = document.querySelectorAll('[data-po="h"]');
+    if (boxes.length) boxes[boxes.length - 1].focus();
+    return;
+  }
+  var pdel = e.target.closest('[data-pdel]');
+  if (pdel) {
+    var pi = +pdel.dataset.pdel, pr = polNow()[ISEC][pi];
+    if (!confirm('"' + ((pr.h && (pr.h.ko || pr.h.en)) || '이 항목') + '" 을 지웁니다. 계속할까요?')) return;
+    polEdit()[ISEC].splice(pi, 1); save(); render(); toast('지웠습니다'); return;
+  }
+  var pmv = e.target.closest('[data-pmv]');
+  if (pmv) {
+    var i0 = +pmv.dataset.pmv, d0 = +pmv.dataset.dir, arr = polEdit()[ISEC];
+    if (i0 + d0 < 0 || i0 + d0 >= arr.length) return;
+    var tmp = arr[i0]; arr[i0] = arr[i0 + d0]; arr[i0 + d0] = tmp;
+    save(); render(); return;
+  }
+  var ptr = e.target.closest('[data-ptr]');
+  if (ptr) { polTranslate(+ptr.dataset.ptr); return; }
+  if (e.target.id === 'carrAdd') {
+    carrEdit().push({ id: 'c' + (Date.now() % 100000), name: {}, url: 'https://t.17track.net/en?nums={n}' });
+    save(); render(); return;
+  }
+  var cdel = e.target.closest('[data-cdel]');
+  if (cdel) {
+    var ci = +cdel.dataset.cdel, cc = carrNow()[ci];
+    if (!confirm('"' + ((cc.name && (cc.name.ko || cc.name.en)) || cc.id) + '" 을 목록에서 지웁니다. 계속할까요?')) return;
+    carrEdit().splice(ci, 1); save(); render(); toast('지웠습니다'); return;
+  }
+  var ctest = e.target.closest('[data-ctest]');
+  if (ctest) {
+    var tc = carrNow()[+ctest.dataset.ctest];
+    if (!tc || !tc.url) return toast('조회 주소가 비어 있습니다');
+    window.open(tc.url.replace(/\{n\}/g, 'EE123456789ES'), '_blank', 'noopener');
+    toast('시험 번호로 열었습니다 — 조회 화면이 뜨는지만 봐 주세요');
+    return;
+  }
   if (e.target.id === 'mWipe') {
     if (!confirm('보관함의 미리보기 파일을 모두 지웁니다. 이미 폴더에 넣고 배포하셨다면 지워도 사이트에는 그대로 보입니다. 계속할까요?')) return;
     window.MEDIA.clear().then(function () { render(); toast('보관함을 비웠습니다'); });
@@ -1507,6 +1725,31 @@ document.addEventListener('change', function (e) {
     vProd();
   }
 });
+/* 안내·결제 탭의 칸들. 글자를 칠 때마다 화면을 다시 그리면 커서가 튀므로
+   값만 조용히 저장합니다 (화면은 이미 손님이 친 그대로입니다). */
+document.addEventListener('input', function (e) {
+  var el = e.target, ds = el.dataset || {};
+  if (ds.po) { polSet(ds.po, +ds.pi, el.value); return; }
+  if (ds.pmf) {
+    var m = paymEdit()[+ds.pmi]; if (!m) return;
+    if (!m[ds.pmf]) m[ds.pmf] = {};
+    m[ds.pmf][ILANG] = el.value; save(); return;
+  }
+  if (ds.cf) {
+    var c = carrEdit()[+ds.ci]; if (!c) return;
+    if (ds.cf === 'url') c.url = el.value;
+    else { if (!c.name) c.name = {}; c.name[ILANG] = el.value; }
+    save(); return;
+  }
+});
+document.addEventListener('change', function (e) {
+  var on = e.target.closest && e.target.closest('[data-pmon]');
+  if (!on) return;
+  var m = paymEdit()[+on.dataset.pmon]; if (!m) return;
+  m.on = !!on.checked; save(); render();
+  toast(m.on ? '손님이 고를 수 있게 했습니다' : '준비중으로 두었습니다');
+});
+
 document.addEventListener('input', function (e) {
   if (e.target.id === 'fq') { clearTimeout(window._q); window._q = setTimeout(function () {
     FILT.q = document.getElementById('fq').value; vProd();
@@ -1694,6 +1937,8 @@ function collectFiles() {
 }
 function gatherFiles() {
   var files = [{ path: 'assets/data.js', b64: b64(buildDataJs()) }];
+  /* 안내 문구·결제 수단·택배사를 고쳤으면 그 파일도 같이 올립니다. */
+  if (infoDirty()) files.push({ path: 'assets/policy.js', b64: b64(buildPolicyJs()) });
   var want = (MISS || []).slice();
   if (!want.length) return Promise.resolve(files);
   return want.reduce(function (chain, p) {
@@ -1753,7 +1998,9 @@ function publish() {
       /* 방금 올린 파일에 모든 변경이 들어갔습니다. 임시 변경은 이제 역할이 끝났습니다.
          남겨 두면 다음 번에 같은 상품이 두 개로 보입니다. 그래서 여기서 자동으로 지웁니다.
          (새로 넣은 상품은 배포가 끝날 때까지만 잠깐 남았다가, data.js 에 나타나면 스스로 빠집니다.) */
-      D.p = {}; D.del = {}; D.fx = null; save();
+      D.p = {}; D.del = {}; D.fx = null;
+      delete D.pol; delete D.paym; delete D.carr;   // 안내 문구도 이제 파일에 들어갔습니다
+      save();
       setTimeout(watchDeploy, 1200);
     })
     .catch(function (err) {
@@ -1945,12 +2192,19 @@ function exportData() {
         '이 파일을 assets 폴더에 넣고 배포하면 사이트에서도 그만큼 사라집니다.\n' +
         '지운 상품은 [상품] 탭 맨 위에서 되살릴 수 있습니다.\n\n계속 내보낼까요?')) return;
   }
-  var text = buildDataJs();
-  var blob = new Blob([text], { type: 'text/javascript;charset=utf-8' });
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = 'data.js';
-  document.body.appendChild(a); a.click();
-  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  var drop = function (text, name) {
+    var blob = new Blob([text], { type: 'text/javascript;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  };
+  drop(buildDataJs(), 'data.js');
+  if (infoDirty()) {                    // 안내 문구도 고쳤으면 같이 내려받습니다
+    setTimeout(function () { drop(buildPolicyJs(), 'policy.js'); }, 600);
+    toast('data.js 와 policy.js 를 내보냈습니다 — 둘 다 assets 폴더에 덮어써 주세요');
+    return;
+  }
   toast('내보냈습니다 — assets 폴더에 덮어쓴 뒤 [올린 뒤 정리]를 눌러 주세요');
 }
 var _next = 0;

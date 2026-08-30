@@ -11,11 +11,11 @@
 
    숫자(VERSION)를 올리면 예전에 저장해 둔 것이 전부 버려집니다.
    사이트를 고칠 때마다 이 숫자를 올립니다. */
-var VERSION = 'me-2026-08-30-01';
+var VERSION = 'me-2026-08-30-02';
 
 var CORE = [
   './', 'index.html', 'shop.html', 'product.html', 'brands.html', 'brand.html',
-  'cart.html', 'thanks.html',
+  'cart.html', 'thanks.html', 'policy.html', 'track.html',
   'assets/styles.css', 'assets/app.js', 'assets/i18n.js', 'assets/media.js',
   'assets/icon.svg', 'assets/icon-192.png', 'assets/icon-512.png',
   'manifest.webmanifest'

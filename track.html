@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>배송 조회 — Mediterráneo</title>
+<meta name="description" content="운송장번호로 배송 상황을 확인합니다.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#1E4FD8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mediterráneo">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<header class="site-head"></header>
+<main id="main" class="wrap"></main>
+<footer class="site-foot"></footer>
+
+<script src="assets/i18n.js"></script>
+<script src="assets/data.js"></script>
+<script src="assets/policy.js"></script>
+<script src="assets/media.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  var M = window.ME, t = M.t;
+  var LSK = 'me_track';                       // 마지막에 넣은 택배사·번호를 기억해 둡니다
+  var last = {};
+  try { last = JSON.parse(localStorage.getItem(LSK) || '{}') || {}; } catch (e) { last = {}; }
+
+  var q = new URLSearchParams(location.search);
+  var pre = { c: q.get('c') || last.c || (M.CARR[0] && M.CARR[0].id) || '', n: q.get('n') || last.n || '' };
+
+  function carrier(id) {
+    for (var i = 0; i < M.CARR.length; i++) if (M.CARR[i].id === id) return M.CARR[i];
+    return M.CARR[0] || null;
+  }
+
+  function draw() {
+    document.title = t('trk.title') + ' — Mediterráneo';
+    document.getElementById('main').innerHTML =
+      '<section class="sec" style="padding-top:26px">' +
+        '<div class="sec-h"><div><h2>' + t('trk.title') + '</h2>' +
+        '<div class="sub">' + t('trk.lede') + '</div></div></div>' +
+
+        '<div class="trackbox">' +
+          '<div class="field">' +
+            '<label for="tCar">' + t('trk.carrier') + '</label>' +
+            '<select id="tCar">' + M.CARR.map(function (c) {
+              return '<option value="' + M.esc(c.id) + '"' + (c.id === pre.c ? ' selected' : '') + '>' +
+                M.esc(M.pt(c.name)) + '</option>';
+            }).join('') + '</select>' +
+          '</div>' +
+          '<div class="field">' +
+            '<label for="tNum">' + t('trk.num') + '</label>' +
+            '<input id="tNum" inputmode="latin" autocomplete="off" spellcheck="false" ' +
+              'placeholder="EE123456789ES" value="' + M.esc(pre.n) + '">' +
+          '</div>' +
+          '<button type="button" class="btn primary" id="tGo">' + t('trk.go') + '</button>' +
+        '</div>' +
+        '<p class="trkmsg" id="tMsg" hidden></p>' +
+
+        '<div class="polfoot">' +
+          '<p>' + t('trk.notyet') + '</p>' +
+          '<p>' + t('trk.help') + '</p>' +
+          '<p><a class="btn" href="mailto:' + M.MAIL + '?subject=' + encodeURIComponent(t('trk.title')) + '">' +
+            t('foot.contact') + ' · ' + M.MAIL + '</a>' +
+            '<a class="btn ghost" href="' + M.link('policy.html', { s: 'ship' }) + '" style="margin-left:8px">' +
+            t('pol.ship') + '</a></p>' +
+        '</div>' +
+      '</section>';
+  }
+
+  function say(msg) {
+    var el = document.getElementById('tMsg');
+    if (!el) return;
+    el.textContent = msg; el.hidden = false;
+  }
+
+  function go() {
+    var cid = document.getElementById('tCar').value;
+    var num = (document.getElementById('tNum').value || '').replace(/\s+/g, '');
+    if (!num) { say(t('trk.need')); document.getElementById('tNum').focus(); return; }
+    var c = carrier(cid);
+    if (!c || !c.url) { say(t('trk.need')); return; }
+
+    try { localStorage.setItem(LSK, JSON.stringify({ c: cid, n: num })); } catch (e) {}
+    try {
+      var u = new URL(location.href);
+      u.searchParams.set('c', cid); u.searchParams.set('n', num);
+      history.replaceState(null, '', u.pathname + u.search);
+    } catch (e) {}
+
+    /* {n} 자리에 번호를 넣습니다. 주소에 안전하게 들어가도록 한 번 감쌉니다. */
+    var url = c.url.replace(/\{n\}/g, encodeURIComponent(num));
+    window.open(url, '_blank', 'noopener');
+    say(t('trk.opened'));
+  }
+
+  M.boot('track.html', draw);
+
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('#tGo')) go();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target && e.target.id === 'tNum') { e.preventDefault(); go(); }
+  });
+})();
+</script>
+</body>
+</html>
