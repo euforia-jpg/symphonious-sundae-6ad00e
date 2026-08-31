@@ -288,6 +288,21 @@ var BASE_FX = { base: window.FX.base, buffer: window.FX.buffer, at: window.FX.at
 var D = LS.get(KEY, null) || { p: {}, add: [], del: {}, auto: {}, fx: null, ts: null };
 if (!D.p) D.p = {}; if (!D.add) D.add = [];
 if (!D.del) D.del = {}; if (!D.auto) D.auto = {};
+if (!D.b) D.b = [];                       // 손으로 새로 적은 생산자
+
+/* 숫자 읽기 — 스페인식으로 쉼표를 찍어도(1,2) 알아듣습니다.
+   예전에는 칸이 type="number" 여서 "1,2" 를 넣으면 브라우저가 그 값을 통째로 버렸고,
+   우리 쪽에는 빈 칸으로 보여서 무게가 0 으로 저장됐습니다 — 저장이 안 되는 것처럼 보인 이유입니다. */
+function num(s) {
+  if (s == null) return 0;
+  var t = String(s).trim().replace(/\s/g, '').replace(',', '.');
+  if (!t) return 0;
+  var n = parseFloat(t);
+  return isFinite(n) ? n : 0;
+}
+function newBrands() { return D.b.filter(function (b) { return !bLive(b.id); }); }
+function allB() { return BASE_B.concat(newBrands()); }
+function bLive(id) { for (var i = 0; i < BASE_B.length; i++) if (BASE_B[i].id === id) return true; return false; }
 
 /* 안내 문구는 통째로 보관합니다 (항목이 늘고 줄기 때문에 조각으로 나누면 오히려 어긋납니다).
    손대기 전에는 null 이고, 한 번이라도 고치면 그때 복사본이 생깁니다. */
@@ -323,9 +338,10 @@ function pendingAdds() { return D.add.filter(function (p) { return !alreadyLive(
 
 /* 대쉬보드를 열 때 한 번 쓸어 냅니다 — 이미 올라간 것은 임시 목록에서 지웁니다. */
 (function sweep() {
-  var before = D.add.length;
+  var before = D.add.length, bb = D.b.length;
   D.add = pendingAdds();
-  if (D.add.length !== before) { D.ts = null; LS.set(KEY, D); }
+  D.b = newBrands();
+  if (D.add.length !== before || D.b.length !== bb) { D.ts = null; LS.set(KEY, D); }
 })();
 
 /* 변경분을 얹은 "지금 화면에 보이는" 상품 목록. 지운 상품은 빠집니다. */
@@ -347,7 +363,7 @@ function fxNow() {
   return { base: +f.base, buffer: +f.buffer, at: f.at, source: f.source,
            rate: Math.round(+f.base * (1 + +f.buffer) * 10) / 10 };
 }
-function brand(id) { for (var i = 0; i < BASE_B.length; i++) if (BASE_B[i].id === id) return BASE_B[i]; return null; }
+function brand(id) { var a = allB(); for (var i = 0; i < a.length; i++) if (a[i].id === id) return a[i]; return null; }
 function baseById(id) { for (var i = 0; i < BASE_P.length; i++) if (String(BASE_P[i].id) === String(id)) return BASE_P[i]; return null; }
 function getP(id) { var a = merged(); for (var i = 0; i < a.length; i++) if (String(a[i].id) === String(id)) return a[i]; return null; }
 function same(a, b) { return JSON.stringify(a === undefined ? null : a) === JSON.stringify(b === undefined ? null : b); }
@@ -357,8 +373,16 @@ function setP(id, field, value) {
   var addP = D.add.filter(function (p) { return String(p.id) === String(id); })[0];
   if (addP) { addP[field] = value; save(); return; }
   var base = baseById(id);
-  if (!base) return;
+  if (!base) base = {};                    // 모르는 번호라도 조용히 흘려 버리지 않습니다
   if (!D.p[id]) D.p[id] = {};
+  /* 원래도 없었고 지금도 비었으면 "고친 것"이 아닙니다 — 쓸데없는 기록을 남기지 않습니다 */
+  var empty = value === '' || value === 0 || value === false || value == null;
+  if (base[field] == null && empty) {
+    delete D.p[id][field];
+    if (!Object.keys(D.p[id]).length) delete D.p[id];
+    save();
+    return;
+  }
   if (same(base[field], value)) {
     delete D.p[id][field];
     if (!Object.keys(D.p[id]).length) delete D.p[id];
@@ -376,7 +400,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function 
 function nm(p) { return p.name && (p.name.ko || p.name.en) || '(이름 없음)'; }
 function krw(eur) { return Math.round(eur * fxNow().rate / 10) * 10; }
 function won(n) { return '₩' + n.toLocaleString('ko-KR'); }
-function dirty() { return Object.keys(D.p).length > 0 || pendingAdds().length > 0 || Object.keys(D.del).length > 0 || !!D.fx || infoDirty(); }
+function dirty() { return Object.keys(D.p).length > 0 || pendingAdds().length > 0 || newBrands().length > 0 || Object.keys(D.del).length > 0 || !!D.fx || infoDirty(); }
 function save() {
   D.ts = new Date().toISOString().slice(0, 16).replace('T', ' ');
   LS.set(KEY, D); paintBar();
@@ -480,7 +504,7 @@ function vHome() {
       kpi('전체 상품', P.length, es.length + ' · Europa / ' + (P.length - es.length) + ' · Corea') +
       kpi('지금 팔 수 있음', live.length, '가격·용량·재고가 모두 있는 상품', live.length === P.length ? 'ok' : '') +
       kpi('아직 못 파는 것', P.length - live.length, '가격이나 재고가 비어 있습니다', (P.length - live.length) ? 'bad' : 'ok') +
-      kpi('브랜드', BASE_B.length, '생산자 수') +
+      kpi('브랜드', allB().length, '생산자 수') +
       kpi('적용 환율', '₩' + f.rate.toLocaleString('ko-KR'), '€1 · 버퍼 ' + Math.round(f.buffer * 100) + '%') +
       kpi('환율 기준일', '<span style="font-size:19px">' + esc(String(f.at).slice(0, 10)) + '</span>', esc(f.source)) +
     '</div>' +
@@ -571,15 +595,15 @@ function rowHTML(p) {
     '<td><span class="pname">' + esc(nm(p)) + '</span>' +
       '<span class="pmeta">' + esc(b ? b.name : p.brand) + ' · ' + CATNAME[p.cat] + '</span></td>' +
     '<td><span class="pill ' + p.hall + '">' + (p.hall === 'es' ? 'ES' : 'KR') + '</span></td>' +
-    '<td><input class="s" type="number" step="0.01" min="0" data-f="eur" value="' + (p.eur || '') + '" placeholder="미정"></td>' +
+    '<td><input class="s" inputmode="decimal" data-f="eur" value="' + (p.eur || '') + '" placeholder="미정"></td>' +
     '<td class="num pmeta">' + (p.eur ? won(krw(p.eur)) : '—') + '</td>' +
     '<td><input class="xs" style="width:88px;text-align:left" data-f="g" value="' + esc(p.g || '') + '" placeholder="500 ml"></td>' +
-    '<td><input class="xs" style="width:66px" type="number" min="0" step="0.05" data-f="kg" value="' + (p.kg || '') + '" placeholder="kg"></td>' +
+    '<td><input class="xs" style="width:66px" inputmode="decimal" data-f="kg" value="' + (p.kg || '') + '" placeholder="kg"></td>' +
     '<td><input class="xs" type="number" min="0" step="1" data-f="stock" value="' + (p.stock == null ? '' : p.stock) + '"></td>' +
     '<td><select class="s" style="width:96px" data-f="badge" title="BEST 는 이번 달 판매 수량으로 자동으로 정해집니다">' +
         '<option value=""' + (p.badge !== 'new' ? ' selected' : '') + '>—</option>' +
         '<option value="new"' + (p.badge === 'new' ? ' selected' : '') + '>NEW</option></select></td>' +
-    '<td>' +
+    '<td class="st">' +
       (p.hidden ? '<span class="pill warn" style="margin:1px 2px 1px 0">숨김</span>' : '') +
       iss.map(function (s) { return '<span class="pill bad" style="margin:1px 2px 1px 0">' + s + '</span>'; }).join('') +
       softs(p).map(function (s) { return '<span class="pill warn" style="margin:1px 2px 1px 0">' + s + '</span>'; }).join('') +
@@ -855,8 +879,26 @@ var FIELDS = [
   { k: 'desc', label: '상품 설명',   ph: '무엇인지 · 어떻게 만드는지 · 어떻게 쓰는지. 두세 문장이면 충분합니다.', big: true }
 ];
 
+/* 생산자를 새로 만듭니다. 주소에 쓸 짧은 이름(id)은 이름에서 자동으로 뽑습니다. */
+function slug(s) {
+  var t = String(s).normalize ? String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '') : String(s);
+  t = t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return t || ('b' + (Date.now() % 100000));
+}
+function addBrand(name, loc, since, story, hall) {
+  var id = slug(name), n = 2, taken = allB();
+  function used(x) { for (var i = 0; i < taken.length; i++) if (taken[i].id === x) return true; return false; }
+  while (used(id)) id = slug(name) + '-' + (n++);
+  var h = 0; for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+  var b = { id: id, name: name, hall: hall === 'kr' ? 'kr' : 'es', loc: loc || '', h: h };
+  if (since && num(since) > 1000) b.since = Math.round(num(since));
+  if (story) b.story = { ko: story };
+  D.b.push(b); save();
+  return id;
+}
+
 function blank() {
-  return { id: 'new', hall: 'es', cat: 'food', brand: BASE_B[0].id, eur: 0, g: '', stock: 0,
+  return { id: 'new', hall: 'es', cat: 'food', brand: (BASE_B[0] || {}).id || '', eur: 0, g: '', stock: 0,
            badge: 'new', origin: '', dop: '', img: '', imgs: [], name: {}, tag: {}, desc: {} };
 }
 function vEdit() {
@@ -881,13 +923,26 @@ function vEdit() {
         '<option value="kr"' + (p.hall === 'kr' ? ' selected' : '') + '>Corea (한국 → 남유럽)</option></select></label>' +
       '<label class="fld"><span>분류</span><select id="e_cat">' + CATS.map(function (c) {
         return '<option value="' + c + '"' + (p.cat === c ? ' selected' : '') + '>' + CATNAME[c] + '</option>'; }).join('') + '</select></label>' +
-      '<label class="fld"><span>브랜드(생산자)</span><select id="e_brand">' + BASE_B.map(function (b) {
-        return '<option value="' + b.id + '"' + (p.brand === b.id ? ' selected' : '') + '>' + esc(b.name) + ' · ' + esc(b.loc) + '</option>'; }).join('') + '</select></label>' +
-      '<label class="fld"><span>가격 (€) — 모르면 비워 두세요</span><input id="e_eur" type="number" step="0.01" min="0" value="' + (p.eur || '') + '" placeholder="24.90"></label>' +
+      '<label class="fld"><span>브랜드(생산자)</span><select id="e_brand">' + allB().map(function (b) {
+        return '<option value="' + esc(b.id) + '"' + (p.brand === b.id ? ' selected' : '') + '>' + esc(b.name) + (b.loc ? ' · ' + esc(b.loc) : '') + '</option>'; }).join('') +
+        '<option value="__new__">＋ 직접 적기 (새 생산자)</option></select>' +
+        '<span class="hint" style="margin:4px 0 0">목록에 없으면 [＋ 직접 적기] 를 고르세요.</span></label>' +
+      '<div class="fld" id="e_bbox" hidden style="grid-column:1/-1;background:#f7f9ff;border:1px solid var(--line);border-radius:10px;padding:10px">' +
+        '<span style="font-weight:700">새 생산자</span>' +
+        '<div class="grid2" style="margin-top:6px">' +
+          '<label class="fld"><span>이름 <b style="color:var(--bad)">*</b></span><input id="e_bname" placeholder="Finca Hostalets"></label>' +
+          '<label class="fld"><span>지역</span><input id="e_bloc" placeholder="Barcelona, ES"></label>' +
+          '<label class="fld"><span>시작한 해 (없으면 비움)</span><input id="e_bsince" inputmode="numeric" placeholder="1898"></label>' +
+          '<label class="fld"><span>한 줄 소개 (한국어, 없으면 비움)</span><input id="e_bstory" placeholder="1898년부터 이어 온 가족 농장"></label>' +
+        '</div>' +
+        '<span class="hint" style="margin:6px 0 0">저장을 누르면 생산자가 새로 만들어지고, 이 상품에 붙습니다. ' +
+        '[반영·배포] 를 하면 손님 화면의 브랜드 목록에도 나옵니다.</span></div>' +
+      '<label class="fld"><span>가격 (€) — 모르면 비워 두세요</span><input id="e_eur" inputmode="decimal" value="' + (p.eur || '') + '" placeholder="24.90"></label>' +
       '<label class="fld"><span>용량·무게 (단위까지)</span><input id="e_g" value="' + esc(p.g || '') + '" placeholder="500 ml / 250 g"></label>' +
       '<label class="fld"><span>배송 무게 kg <b style="color:var(--bad)">*</b></span>' +
-        '<input id="e_kg" type="number" min="0" step="0.05" value="' + (p.kg || '') + '" placeholder="1.2">' +
-        '<span class="hint" style="margin:4px 0 0">포장까지 포함한 실제 무게입니다. 배송비 계산에 씁니다.</span></label>' +
+        '<input id="e_kg" inputmode="decimal" value="' + (p.kg || '') + '" placeholder="1.2">' +
+        '<span class="hint" style="margin:4px 0 0">포장까지 포함한 실제 무게입니다. 배송비 계산에 씁니다. ' +
+        '<b>1,2 처럼 쉼표로 적어도 됩니다.</b></span></label>' +
       '<label class="fld"><span>등록일 (NEW 배지)</span>' +
         '<input id="e_since" type="date" value="' + esc(p.since || '') + '">' +
         '<span class="hint" style="margin:4px 0 0">이 날부터 45일 동안 손님 화면에 NEW 가 붙습니다. 비워 두면 안 붙습니다.</span></label>' +
@@ -1061,12 +1116,21 @@ function showAsk(txt) {
 
 /* 저장 · 숨기기 · 지우기 */
 function readEdit() {
-  function v(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
-  var o = { hall: v('e_hall'), cat: v('e_cat'), brand: v('e_brand'),
-            eur: v('e_eur') ? Math.round(parseFloat(v('e_eur')) * 100) / 100 : 0,
-            g: v('e_g'), kg: parseFloat(v('e_kg')) || 0, stock: parseInt(v('e_stock'), 10) || 0,
-            since: v('e_since'), soldM: parseInt(v('e_soldM'), 10) || 0,
-            badge: v('e_badge'), origin: v('e_origin'), dop: v('e_dop') };
+  function el(id) { return document.getElementById(id); }
+  function v(id) { var e = el(id); return e ? e.value.trim() : ''; }
+  var o = {};
+  /* 화면에 없는 칸은 손대지 않습니다.
+     예전에는 없는 칸도 빈 값으로 읽어서, 무게 칸이 없던 시절에 저장을 한 번만 눌러도
+     원래 들어 있던 무게가 0 으로 덮어써졌습니다. */
+  function put(k, id, conv) { if (el(id)) o[k] = conv ? conv(v(id)) : v(id); }
+  put('hall', 'e_hall'); put('cat', 'e_cat'); put('brand', 'e_brand');
+  put('eur',  'e_eur',  function (s) { return Math.round(num(s) * 100) / 100; });
+  put('g',    'e_g');
+  put('kg',   'e_kg',   function (s) { return Math.round(num(s) * 1000) / 1000; });
+  put('stock','e_stock',function (s) { return Math.round(num(s)); });
+  put('since','e_since');
+  put('soldM','e_soldM',function (s) { return Math.round(num(s)); });
+  put('badge','e_badge'); put('origin','e_origin'); put('dop','e_dop');
   FIELDS.forEach(function (f) { o[f.k] = {}; });
   document.querySelectorAll('[data-e]').forEach(function (el) {
     var val = el.value.trim(); if (!val) return;
@@ -1079,6 +1143,18 @@ function saveEdit() {
   if (!o.name.ko && !o.name.en && !o.name.es) return toast('상품 이름을 하나 이상 넣어 주세요');
   if (!o.name.en) o.name.en = o.name.es || o.name.ko;
   if (o.eur < 0) return toast('가격은 0 이상이어야 합니다');
+
+  /* 생산자를 직접 적었으면 여기서 새로 만듭니다 */
+  if (o.brand === '__new__') {
+    var bn = (document.getElementById('e_bname') || {}).value || '';
+    bn = bn.trim();
+    if (!bn) { toast('생산자 이름을 적어 주세요'); var bx = document.getElementById('e_bname'); if (bx) bx.focus(); return; }
+    o.brand = addBrand(bn,
+      ((document.getElementById('e_bloc') || {}).value || '').trim(),
+      ((document.getElementById('e_bsince') || {}).value || '').trim(),
+      ((document.getElementById('e_bstory') || {}).value || '').trim(),
+      o.hall || 'es');
+  }
 
   if (ESEL === 'new') {
     var id = 'n' + (Date.now() % 100000);
@@ -1094,7 +1170,8 @@ function saveEdit() {
   }
   var cur = getP(ESEL);
   Object.keys(o).forEach(function (k) { if (!same(cur[k], o[k])) setP(ESEL, k, o[k]); });
-  toast('저장했습니다');
+  var after = getP(ESEL) || {};
+  toast('저장했습니다' + (after.kg ? ' · 배송 무게 ' + after.kg + 'kg' : ' · 배송 무게 없음'));
   go('prod');
 }
 function hideToggle() {
@@ -1744,9 +1821,9 @@ document.addEventListener('change', function (e) {
     var tr = e.target.closest('tr'); if (!tr) return;
     var id = tr.dataset.id;
     var v = e.target.value;
-    if (f === 'eur') v = v === '' ? 0 : Math.round(parseFloat(v) * 100) / 100;
-    if (f === 'stock') v = v === '' ? 0 : parseInt(v, 10) || 0;
-    if (f === 'kg') v = v === '' ? 0 : Math.round((parseFloat(v) || 0) * 1000) / 1000;
+    if (f === 'eur') { v = Math.round(num(v) * 100) / 100; e.target.value = v || ''; }
+    if (f === 'stock') { v = Math.round(num(v)); e.target.value = v; }
+    if (f === 'kg') { v = Math.round(num(v) * 1000) / 1000; e.target.value = v || ''; }
     if (f === 'eur' && v < 0) { toast('가격은 0 이상이어야 합니다'); e.target.value = ''; v = 0; }
 
     var addP = D.add.filter(function (p) { return String(p.id) === String(id); })[0];
@@ -1764,13 +1841,24 @@ document.addEventListener('change', function (e) {
        바뀌어야 하는 칸(원화·상태)만 조용히 고쳐 씁니다. */
     var row = merged().filter(function (p) { return String(p.id) === String(id); })[0];
     if (row) {
-      var tds = tr.children;
-      if (tds[4]) tds[4].textContent = row.eur ? won(krw(row.eur)) : '—';
-      if (tds[8]) tds[8].innerHTML =
+      /* 칸 번호로 세지 않습니다 — 칸을 하나 늘렸더니 딱지가 엉뚱한 칸에 찍혔습니다.
+         이름을 붙여 둔 칸만 골라서 고쳐 씁니다. */
+      var wonTd = tr.querySelector('td.num'), stTd = tr.querySelector('td.st');
+      if (wonTd) wonTd.textContent = row.eur ? won(krw(row.eur)) : '—';
+      if (stTd) stTd.innerHTML =
+        (row.hidden ? '<span class="pill warn" style="margin:1px 2px 1px 0">숨김</span>' : '') +
         issues(row).map(function (s) { return '<span class="pill bad" style="margin:1px 2px 1px 0">' + s + '</span>'; }).join('') +
         softs(row).map(function (s) { return '<span class="pill warn" style="margin:1px 2px 1px 0">' + s + '</span>'; }).join('') +
         (issues(row).length || softs(row).length ? '' : '<span class="pill ok">완료</span>');
       if (D.p[id] || addP) tr.classList.add('edited'); else tr.classList.remove('edited');
+    }
+    return;
+  }
+  if (e.target.id === 'e_brand') {
+    var bb = document.getElementById('e_bbox');
+    if (bb) {
+      bb.hidden = e.target.value !== '__new__';
+      if (!bb.hidden) { var bn2 = document.getElementById('e_bname'); if (bn2) bn2.focus(); }
     }
     return;
   }
@@ -2244,7 +2332,7 @@ function buildDataJs() {
   lines.push('   관리자 대쉬보드에서 내보냈습니다: ' + today);
   lines.push('   이 파일을 assets 폴더에 덮어쓰고 배포하면 손님 화면에 반영됩니다. */');
   lines.push('window.BRANDS = [');
-  BASE_B.forEach(function (b) { lines.push('  ' + JSON.stringify(b) + ','); });
+  allB().forEach(function (b) { lines.push('  ' + JSON.stringify(b) + ','); });
   lines.push('];');
   lines.push('');
   lines.push('window.PRODUCTS = [');

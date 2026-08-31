@@ -340,12 +340,23 @@ function pcard(p, i) {
     priceHTML(p) +
     '<div class="badges">' + bd + '</div></div></a>';
 }
+/* 생산자 소개는 빠져 있을 수 있습니다 (대쉬보드에서 이름만 적고 넣은 경우).
+   없는 칸 때문에 화면이 깨지지 않도록 전부 있으면 쓰고 없으면 건너뜁니다. */
+function bstory(b) { var s = b.story || {}; return s[S.lang] || s.en || s.ko || ''; }
+function bline(b) {
+  var a = [];
+  if (b.loc) a.push(esc(b.loc));
+  if (b.since) a.push(t('brand.since') + ' ' + b.since);
+  return a.join(' · ');
+}
+function bhue(b) { return b.h == null ? 210 : b.h; }
 function bcard(b) {
+  var st = bstory(b), ln = bline(b);
   return '<a class="bcard" href="' + link('brand.html', { id: b.id }) + '">' +
-    '<div class="av" style="background:linear-gradient(140deg,hsl(' + b.h + ' 62% 58%),hsl(' + b.h + ' 55% 40%))">' + esc(b.name[0]) + '</div>' +
+    '<div class="av" style="background:linear-gradient(140deg,hsl(' + bhue(b) + ' 62% 58%),hsl(' + bhue(b) + ' 55% 40%))">' + esc(b.name[0]) + '</div>' +
     '<div class="bn">' + esc(b.name) + '</div>' +
-    '<div class="bl">' + esc(b.loc) + ' · ' + t('brand.since') + ' ' + b.since + '</div>' +
-    '<div class="bs">' + esc(b.story[S.lang] || b.story.en) + '</div></a>';
+    (ln ? '<div class="bl">' + ln + '</div>' : '') +
+    (st ? '<div class="bs">' + esc(st) + '</div>' : '') + '</a>';
 }
 
 function header(active) {
@@ -590,7 +601,7 @@ window.ME = {
   prod: prod, brand: brand, nm: nm, tg: tg, esc: esc, link: link,
   fmt: fmt, fmtAlt: fmtAlt, fmtN: fmtN, unit: unit, fxLine: fxLine, toKRW: toKRW,
   MAIL: MAIL, POL: POL, PAYM: PAYM, CARR: CARR, CT: CT, pt: pt, payOn: payOn,
-  country: country, pcard: pcard, bcard: bcard, pimgHTML: pimgHTML, photos: photos, tileFallback: tileFallback,
+  country: country, pcard: pcard, bcard: bcard, bstory: bstory, bline: bline, bhue: bhue, pimgHTML: pimgHTML, photos: photos, tileFallback: tileFallback,
   flag: flag, repaint: paint, halls: halls, boot: boot, toast: toast,
   shuffle: shuffle, badgeOf: badgeOf, isNew: isNew, countUp: countUp,
   cartAdd: cartAdd, cartRemove: cartRemove, cartCount: cartCount,

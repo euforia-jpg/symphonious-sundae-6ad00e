@@ -38,10 +38,10 @@
     document.title = b.name + ' — Mediterráneo';
     var list = M.PV().filter(function (p) { return p.brand === b.id; });
     main.innerHTML =
-      '<section class="hero" style="background:linear-gradient(135deg,hsl(' + b.h + ' 58% 46%),hsl(' + b.h + ' 52% 30%))">' +
-        '<div class="tag">' + M.esc(b.loc) + ' · ' + t('brand.since') + ' ' + b.since + '</div>' +
+      '<section class="hero" style="background:linear-gradient(135deg,hsl(' + M.bhue(b) + ' 58% 46%),hsl(' + M.bhue(b) + ' 52% 30%))">' +
+        (M.bline(b) ? '<div class="tag">' + M.bline(b) + '</div>' : '') +
         '<h1>' + M.esc(b.name) + '</h1>' +
-        '<p>' + M.esc(b.story[M.S.lang] || b.story.en) + '</p>' +
+        (M.bstory(b) ? '<p>' + M.esc(M.bstory(b)) + '</p>' : '') +
       '</section>' +
       '<section class="sec"><div class="sec-h"><div><h2>' + t('brand.products') + '</h2>' +
       '<div class="sub">' + list.length + ' ' + t('cat.items') + '</div></div></div>' +
