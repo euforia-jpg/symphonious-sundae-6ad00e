@@ -1252,10 +1252,18 @@ function vFx() {
     '<div class="cards">' +
       '<div class="kpi"><div class="k">기준환율 (€1)</div><div class="v">₩' + f.base.toLocaleString('ko-KR') + '</div><div class="n">' + esc(f.source) + '</div></div>' +
       '<div class="kpi"><div class="k">판매 버퍼</div><div class="v">' + (f.buffer * 100).toFixed(1) + '%</div><div class="n">카드 수수료·환변동 대비</div></div>' +
-      '<div class="kpi ok"><div class="k">적용 환율</div><div class="v">₩' + f.rate.toLocaleString('ko-KR') + '</div><div class="n">기준환율 × (1 + 버퍼)</div></div>' +
-      '<div class="kpi"><div class="k">기준 시각</div><div class="v" style="font-size:17px">' + esc(f.at) + '</div><div class="n">하루 한 번 갱신 권장</div></div>' +
+      '<div class="kpi ok"><div class="k">적용 환율</div><div class="v" id="kpiRate">₩' + f.rate.toLocaleString('ko-KR') + '</div><div class="n" id="kpiRateN">기준환율 × (1 + 버퍼)</div></div>' +
+      '<div class="kpi"><div class="k">기준 시각</div><div class="v" style="font-size:17px" id="kpiAt">' + esc(f.at) + '</div><div class="n" id="kpiAtN">손님 화면은 매일 자동</div></div>' +
     '</div>' +
-    '<div class="panel"><h3>값 고치기</h3>' +
+    '<div class="panel"><h3>지금 손님이 보는 환율</h3>' +
+      '<p class="hint">손님 브라우저는 <b>하루에 한 번</b> 우리 서버(/api/fx)에 오늘 하나은행 매매기준율을 물어보고, ' +
+      '거기에 위 버퍼를 얹어서 원화를 보여 줍니다. 사장님이 아무것도 안 하셔도 매일 따라갑니다.<br>' +
+      'data.js 에 박힌 값(₩' + BASE_FX.base.toLocaleString('ko-KR') + ')은 <b>받아오지 못했을 때 쓰는 바닥값</b>입니다. ' +
+      '받아온 값이 이 바닥값과 15% 넘게 차이 나면 이상한 값으로 보고 버립니다.</p>' +
+      '<div class="row"><button class="btn" id="fxLive">지금 서버 값 확인</button><span class="pmeta" id="fxLiveMsg"></span></div></div>' +
+    '<div class="panel"><h3>값 고치기 <span class="pill warn">보통은 버퍼만 만지면 됩니다</span></h3>' +
+      '<p class="hint">[적용]을 누르면 그 값으로 <b>못박힙니다</b> — 이 브라우저에서는 자동 갱신이 멈춥니다. ' +
+      '환율이 크게 튀는 날 값을 붙들어 두고 싶을 때만 쓰세요. 되돌리려면 [원래대로].</p>' +
       '<div class="grid2">' +
         '<label class="fld"><span>기준환율 (하나은행 매매기준율)</span><input id="fx_base" type="number" step="0.01" value="' + f.base + '"></label>' +
         '<label class="fld"><span>판매 버퍼 (%)</span><input id="fx_buf" type="number" step="0.1" value="' + (f.buffer * 100) + '"></label>' +
@@ -1269,10 +1277,49 @@ function vFx() {
     '<div class="panel"><h3>손님에게 이렇게 보입니다</h3>' +
       '<div class="tblwrap" style="box-shadow:none"><table style="min-width:0"><thead><tr><th>상품</th><th class="num" style="width:110px">유로</th><th class="num" style="width:130px">원화</th></tr></thead><tbody>' +
       sample.map(function (p) {
-        return '<tr><td>' + esc(nm(p)) + '</td><td class="num">€' + p.eur.toFixed(2) + '</td><td class="num">' + won(krw(p.eur)) + '</td></tr>';
+        return '<tr data-eur="' + p.eur + '"><td>' + esc(nm(p)) + '</td><td class="num">€' + p.eur.toFixed(2) + '</td><td class="num">' + won(krw(p.eur)) + '</td></tr>';
       }).join('') + '</tbody></table></div>' +
       '<p class="hint" style="margin:12px 0 0">원화는 10원 단위로 올림·내림해서 보여 줍니다. 결제는 유로로 이뤄지고 원화는 안내용입니다 — 상품 페이지에도 그렇게 적혀 있습니다.</p></div>'
   );
+  fxLive(true);                       // 탭을 열면 오늘 값으로 맞춰 줍니다
+}
+
+/* 오늘 서버가 주는 값을 받아 화면 숫자를 실제 손님 화면과 맞춰 줍니다.
+   못 받아오면 아무것도 건드리지 않습니다 — data.js 에 박힌 값이 그대로 보입니다. */
+function fxLive(quiet) {
+  var lm = document.getElementById('fxLiveMsg');
+  if (!lm) return;
+  if (!quiet) lm.textContent = '물어보는 중…';
+  var g = function (u) { return fetch(u, { cache: 'no-store' }).then(function (r) {
+    if (!r.ok) throw new Error(r.status); return r.json(); }); };
+  g('/api/fx').catch(function () { return g('/.netlify/functions/fx'); }).then(function (j) {
+    if (!j || !j.ok) throw new Error('no-source');
+    var f = fxNow(), base = parseFloat(BASE_FX.base) || j.base;
+    if (Math.abs(j.base - base) / base > 0.15) {
+      lm.innerHTML = '<b style="color:var(--bad)">받아온 값(₩' + j.base.toLocaleString('ko-KR') +
+        ')이 바닥값과 15% 넘게 차이 납니다.</b> 손님 화면은 바닥값을 씁니다. data.js 의 환율을 한 번 올려 주세요.';
+      return;
+    }
+    var rate = Math.round(j.base * (1 + f.buffer) * 10) / 10;
+    lm.innerHTML = '기준 ₩' + j.base.toLocaleString('ko-KR') + ' · ' + esc(j.source) + ' · ' + esc(j.at);
+    if (D.fx) {                                  // 못박아 두셨으면 화면 숫자는 그대로 둡니다
+      lm.innerHTML += ' <span class="pill warn">지금은 못박은 값이 우선</span>';
+      return;
+    }
+    var el;
+    if ((el = document.getElementById('kpiRate'))) el.textContent = '₩' + rate.toLocaleString('ko-KR');
+    if ((el = document.getElementById('kpiRateN'))) el.textContent = '오늘 손님이 보는 값';
+    if ((el = document.getElementById('kpiAt'))) el.textContent = String(j.at).slice(0, 10);
+    if ((el = document.getElementById('kpiAtN'))) el.textContent = esc(j.source);
+    document.querySelectorAll('tr[data-eur]').forEach(function (tr) {
+      var eur = parseFloat(tr.dataset.eur);
+      tr.children[2].textContent = won(Math.round(eur * rate / 10) * 10);
+    });
+  }).catch(function () {
+    lm.innerHTML = '<b style="color:var(--bad)">오늘 값을 못 받았습니다.</b> ' +
+      'netlify/functions/fx.js 와 netlify.toml 을 올려 배포했는지 확인해 주세요. ' +
+      '그동안 손님 화면은 바닥값 ₩' + BASE_FX.base.toLocaleString('ko-KR') + ' 을 씁니다.';
+  });
 }
 
 /* ---------- 주문 ---------- */
@@ -1659,6 +1706,7 @@ document.addEventListener('click', function (e) {
   }
   if (e.target.id === 'fxReset') { D.fx = null; save(); render(); toast('원래 환율로 되돌렸습니다'); return; }
   if (e.target.id === 'fxFetch') { fetchRate(); return; }
+  if (e.target.id === 'fxLive') { fxLive(false); return; }
 
   /* 주문 */
   if (e.target.id === 'nfLoad') { loadOrders(); return; }
@@ -1956,23 +2004,35 @@ document.addEventListener('drop', function (e) {
 function fetchRate() {
   var msg = document.getElementById('fxMsg');
   msg.textContent = '받아오는 중…';
+  /* 하나은행 매매기준율을 주는 곳은 브라우저에서 바로 못 부릅니다(CORS).
+     그래서 우리 서버(/api/fx)가 대신 받아 옵니다. 그 창구가 아직 없을 때만
+     예전처럼 바깥 API 를 직접 불러 봅니다. */
   var srcs = [
-    { url: 'https://quotation-api-cdn.dunamu.com/v1/forex/recent?codes=FRX.KRWEUR',
-      pick: function (j) { return j && j[0] && j[0].basePrice; }, name: '하나은행 매매기준율' },
+    { url: '/api/fx', alt: '/.netlify/functions/fx',
+      pick: function (j) { return j && j.ok && j.base; },
+      when: function (j) { return j && j.at; },
+      name: function (j) { return (j && j.source) || '하나은행 매매기준율'; } },
     { url: 'https://open.er-api.com/v6/latest/EUR',
-      pick: function (j) { return j && j.rates && j.rates.KRW; }, name: 'open.er-api.com' }
+      pick: function (j) { return j && j.rates && j.rates.KRW; },
+      name: function () { return 'open.er-api.com'; } }
   ];
   (function next(i) {
     if (i >= srcs.length) { msg.textContent = '자동으로 받아오지 못했습니다. 위 칸에 직접 넣어 주세요.'; return; }
-    fetch(srcs[i].url, { cache: 'no-store' })
-      .then(function (r) { return r.json(); })
+    var get = function (u) { return fetch(u, { cache: 'no-store' }).then(function (r) {
+      if (!r.ok) throw new Error(r.status); return r.json(); }); };
+    get(srcs[i].url)
+      .catch(function (e) { if (srcs[i].alt) return get(srcs[i].alt); throw e; })
       .then(function (j) {
         var v = srcs[i].pick(j);
         if (!(v > 500 && v < 4000)) throw new Error('range');
+        var when = (srcs[i].when && srcs[i].when(j)) ||
+                   new Date(Date.now() + 9 * 3600000).toISOString().slice(0, 16).replace('T', ' ');
         document.getElementById('fx_base').value = Math.round(v * 100) / 100;
-        document.getElementById('fx_src').value = srcs[i].name;
-        document.getElementById('fx_at').value = new Date().toISOString().slice(0, 16).replace('T', ' ');
-        msg.textContent = '받아왔습니다 — [적용]을 눌러야 저장됩니다.';
+        document.getElementById('fx_src').value = srcs[i].name(j);
+        document.getElementById('fx_at').value = when;
+        msg.textContent = '오늘 ₩' + (Math.round(v * 100) / 100).toLocaleString('ko-KR') +
+          ' (' + srcs[i].name(j) + ') — 여기서 [적용]을 누르면 이 값으로 못박힙니다. ' +
+          '그냥 두면 손님 화면은 매일 자동으로 오늘 값을 씁니다.';
       })
       .catch(function () { next(i + 1); });
   })(0);

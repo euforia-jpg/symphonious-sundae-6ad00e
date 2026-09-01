@@ -50,6 +50,56 @@ function fxLine() {
          ' · ' + FX.source + ' · ' + FX.at + ' · ' + t('fx.daily');
 }
 
+/* ---------- 환율 자동 갱신 (하루 한 번) ----------
+
+   data.js 에 박힌 값은 "내려앉을 바닥"입니다 — 인터넷이 막혀도 값이 사라지지 않게.
+   그 위에 오늘 값을 얹습니다.
+
+     1) 이 브라우저에 오늘 받아 둔 값이 있으면 그대로 씁니다 (하루 한 번만 부릅니다).
+     2) 없으면 우리 주소 /api/fx 를 부릅니다 — 서버가 하나은행 매매기준율을 대신 받아 옵니다.
+     3) 받아온 값이 박힌 값과 15% 넘게 차이 나면 버립니다.
+        바깥 API 가 이상한 값을 뱉어도 손님 화면 가격이 튀지 않게 하는 안전장치입니다.
+
+   버퍼(판매 마진)는 건드리지 않습니다 — 그건 사장님이 정하는 값입니다.        */
+var FXKEY = 'me_fx';
+function fxDay() { return new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10); }
+function fxApply(f) {
+  var b = parseFloat(f && f.base);
+  if (!(b > 500 && b < 4000)) return false;
+  var baked = parseFloat(window.FX.base) || b;
+  if (Math.abs(b - baked) / baked > 0.15) return false;
+  FX.base = b;
+  if (f.at) FX.at = f.at;
+  if (f.source) FX.source = f.source;
+  FX.rate = Math.round(FX.base * (1 + FX.buffer) * 10) / 10;
+  return true;
+}
+function fxAuto(pinned) {
+  if (pinned) return;                       // 사장님이 대쉬보드에서 못박은 값이 있으면 그대로 둡니다
+  var c = LS.get(FXKEY, null);
+  if (c && c.base) fxApply(c);              // 어제 것이라도 일단 씁니다 (화면이 비지 않게)
+  if (c && c.d === fxDay()) return;         // 오늘 이미 받았으면 끝
+
+  var was = FX.rate, t0 = Date.now();
+  /* 주소는 두 가지입니다. 짧은 쪽이 안 되면 넷리파이 정식 주소로 한 번 더 물어봅니다. */
+  var ask = function (u) {
+    return fetch(u, { cache: 'no-store' }).then(function (r) {
+      if (!r.ok) throw new Error(r.status);
+      return r.json();
+    });
+  };
+  ask('/api/fx').catch(function () { return ask('/.netlify/functions/fx'); })
+    .then(function (j) {
+      if (!j || !j.ok) return;
+      if (!fxApply(j)) return;
+      LS.set(FXKEY, { d: fxDay(), base: FX.base, at: FX.at, source: FX.source });
+      /* 값이 달라졌을 때만 다시 그립니다. 그것도 화면을 연 직후에만 —
+         주문서를 쓰고 계신 중에 화면을 다시 그리면 적던 글이 날아갑니다. */
+      if (FX.rate !== was && Date.now() - t0 < 10000) paint();
+    })
+    .catch(function () { /* 못 받아오면 박힌 값 그대로 — 아무 일도 없었던 것처럼 */ });
+}
+
 /* ---------- 데이터 ---------- */
 var P = window.PRODUCTS, B = window.BRANDS;
 
@@ -57,12 +107,14 @@ var P = window.PRODUCTS, B = window.BRANDS;
    admin.html 에서 저장한 값을 이 브라우저에서만 덮어씁니다.
    내 눈으로 먼저 확인하는 단계입니다. 손님에게 정식으로 보이게 하려면
    admin.html → [data.js 내보내기] → assets 폴더에 덮어쓰기 → 배포. */
+var FX_PINNED = false;              // 사장님이 대쉬보드에서 환율을 못박았는가
 (function () {
   var ov = LS.get('me_admin_v1', null);
   if (!ov) return;
   if (ov.fx) {
     for (var k in ov.fx) if (ov.fx[k] !== '' && ov.fx[k] != null) FX[k] = ov.fx[k];
     FX.rate = Math.round(FX.base * (1 + FX.buffer) * 10) / 10;
+    FX_PINNED = true;
   }
   if (ov.p) for (var i = 0; i < P.length; i++) {
     var o = ov.p[P[i].id];
@@ -484,6 +536,7 @@ function syncUrl() {
 function boot(page, render) {
   PAGE = page; RENDER = render;
   var gone = pruneCart();                    // 없어진 상품을 먼저 걸러 냅니다
+  fxAuto(FX_PINNED);                         // 오늘 환율 — 그리기 전에 얹습니다
   paint();
   if (gone) toast(t('cart.gone').replace('{0}', gone));
 

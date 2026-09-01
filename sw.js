@@ -11,7 +11,7 @@
 
    숫자(VERSION)를 올리면 예전에 저장해 둔 것이 전부 버려집니다.
    사이트를 고칠 때마다 이 숫자를 올립니다. */
-var VERSION = 'me-2026-08-31-10';
+var VERSION = 'me-2026-09-01-11';
 
 var CORE = [
   './', 'index.html', 'shop.html', 'product.html', 'brands.html', 'brand.html',
@@ -75,6 +75,8 @@ self.addEventListener('fetch', function (e) {
   var url = new URL(req.url);
   if (url.origin !== location.origin) return;          // 글꼴 등 외부 주소는 건드리지 않습니다
   if (url.pathname.indexOf('/admin') >= 0) return;     // 관리자 화면은 저장하지 않습니다
+  if (url.pathname.indexOf('/api/') === 0) return;     // 오늘 환율은 늘 새로 — 저장하면 어제 값이 남습니다
+  if (url.pathname.indexOf('/.netlify/') === 0) return;
 
   var p = url.pathname;
   var isMedia = /\/assets\/(img|video)\//.test(p) || /\.(png|jpe?g|webp|gif|svg|mp4|webm|woff2?)$/i.test(p);

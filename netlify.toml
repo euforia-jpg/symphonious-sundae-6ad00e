@@ -1,6 +1,10 @@
 [build]
   publish = "."
 
+# 오늘 환율을 대신 받아다 주는 창구 (netlify/functions/fx.js)
+[functions]
+  directory = "netlify/functions"
+
 [[headers]]
   for = "/*"
   [headers.values]
