@@ -105,7 +105,9 @@ input,select,textarea{font:inherit; color:inherit}
 @media(max-width:860px){
   .wrap{padding:0 16px}
   .head-in{flex-direction:column;align-items:stretch;gap:9px;padding-block:10px 8px}
-  .head-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .head-top{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+  .lockup{min-width:0}                 /* 로고가 도구들을 밖으로 밀어내지 않게 */
+  .head-tools{flex:none}
   .lockup .mk{font-size:29px}
   .lockup .wm{font-size:15px;letter-spacing:.08em}
   .nav{margin-right:0;gap:20px;font-size:14px;overflow-x:auto;scrollbar-width:none}
@@ -295,6 +297,29 @@ input,select,textarea{font:inherit; color:inherit}
 .citem .cb{font-size:10.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
 .citem .cp{font-size:15px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums}
 .citem .rm{color:var(--muted);font-size:12.5px;align-self:flex-start;text-decoration:underline}
+
+/* 장바구니 개수 조절 — 손가락으로도 정확히 눌리게 넉넉히 잡습니다 */
+.cqty{display:flex;align-items:center;gap:10px;margin-top:9px;flex-wrap:wrap}
+.qbox{display:inline-flex;align-items:center;border:1px solid var(--line2);border-radius:999px;background:var(--surface);overflow:hidden}
+.qbox .qbtn{width:34px;height:34px;border-radius:0;display:grid;place-items:center;font-size:17px;font-weight:600;line-height:1;
+  color:var(--ink);background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  transition:background .12s ease,color .12s ease}
+.qbox .qbtn:hover:not(:disabled){background:var(--accent-soft)}
+.qbox .qbtn:disabled{color:var(--line2);cursor:default;background:none}
+.qbox .qbtn:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.qn{width:44px;height:34px;border:0;border-left:1px solid var(--line2);border-right:1px solid var(--line2);
+  text-align:center;font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums;
+  background:none;color:var(--ink);-moz-appearance:textfield}
+.qn::-webkit-outer-spin-button,.qn::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.qn:focus{outline:0;background:var(--accent-soft)}
+.qlt{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.qea{font-size:12px;color:var(--muted);font-weight:500}
+.qmax{font-size:11.5px;color:var(--pom);font-weight:600;width:100%}
+@media (max-width:520px){
+  .citem .pimg{width:72px;height:72px}
+  .qbox .qbtn{width:38px;height:38px}
+  .qn{width:46px;height:38px}
+}
 .summary{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-m);padding:20px;box-shadow:var(--shadow-s);position:sticky;top:86px}
 .summary .r{display:flex;justify-content:space-between;font-size:14px;color:var(--ink2);font-variant-numeric:tabular-nums;margin-bottom:10px}
 .summary .r.total{border-top:1px dashed var(--line);padding-top:13px;margin-top:6px;font-size:18px;font-weight:700;color:var(--ink)}
@@ -335,8 +360,10 @@ input,select,textarea{font:inherit; color:inherit}
   .hall .hf{display:none}
   .hall .ht{overflow:hidden;text-overflow:ellipsis;min-width:0}
 }
-/* 아주 좁은 화면: 언어 버튼은 국기만 남깁니다 */
-@media(max-width:374px){
+/* 좁은 화면: 언어 버튼은 국기만 남깁니다.
+   예전에는 374px 아래에서만 줄였는데, 요즘 흔한 390~430px 폰에서
+   머리줄이 화면 밖으로 30px 삐져나가 옆으로 밀리는 일이 있었습니다. */
+@media(max-width:430px){
   .lockup{min-width:0}
   .lockup .wm{font-size:13px;letter-spacing:.05em;overflow:hidden;text-overflow:ellipsis}
   .picker-btn .pb-t{display:none}

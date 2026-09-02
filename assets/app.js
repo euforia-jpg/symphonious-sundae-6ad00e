@@ -206,11 +206,36 @@ function cartCount() { return S.cart.reduce(function (s, i) { return s + i.q; },
 function cartAdd(id, q) {
   var f = S.cart.filter(function (i) { return i.id === id; })[0];
   if (f) f.q += q; else S.cart.push({ id: id, q: q });
+  var max = cartMax(id);
+  if (f && f.q > max) f.q = max;                  // 재고보다 많이 담기지 않게
+  else if (!f && q > max) S.cart[S.cart.length - 1].q = max;
   LS.set('me_cart', S.cart); paintCartCount();
 }
 function cartRemove(id) {
   S.cart = S.cart.filter(function (i) { return i.id !== id; });
   LS.set('me_cart', S.cart); paintCartCount();
+}
+/* 살 수 있는 최대 개수. 재고를 넣어 둔 상품은 재고까지, 아니면 99 개까지. */
+function cartMax(id) {
+  var p = prod(id);
+  var s = p && parseInt(p.stock, 10);
+  return (s && s > 0) ? Math.min(s, 99) : 99;
+}
+/* 개수를 그 자리에서 고칩니다. 0 이하로 내리면 장바구니에서 뺍니다.
+   돌려주는 값은 "실제로 정해진 개수" 입니다 — 재고에 걸려 요청보다 작을 수 있습니다. */
+function cartSetQty(id, q) {
+  q = Math.floor(Number(q));
+  if (!isFinite(q) || q <= 0) { cartRemove(id); return 0; }
+  var max = cartMax(id);
+  if (q > max) q = max;
+  var f = S.cart.filter(function (i) { return i.id === id; })[0];
+  if (!f) { S.cart.push({ id: id, q: q }); } else { f.q = q; }
+  LS.set('me_cart', S.cart); paintCartCount();
+  return q;
+}
+function cartQty(id) {
+  var f = S.cart.filter(function (i) { return i.id === id; })[0];
+  return f ? f.q : 0;
 }
 function subtotal() {
   return S.cart.reduce(function (s, i) { var p = prod(i.id); return p ? s + unit(p.eur) * i.q : s; }, 0);
@@ -658,6 +683,7 @@ window.ME = {
   flag: flag, repaint: paint, halls: halls, boot: boot, toast: toast,
   shuffle: shuffle, badgeOf: badgeOf, isNew: isNew, countUp: countUp,
   cartAdd: cartAdd, cartRemove: cartRemove, cartCount: cartCount,
+  cartSetQty: cartSetQty, cartQty: cartQty, cartMax: cartMax,
   subtotal: subtotal, shipFee: shipFee, freeFrom: freeFrom,
   SHIP: SHIP, cartKg: cartKg, billKg: billKg, shipEUR: shipEUR, shipUnknown: shipUnknown
 };

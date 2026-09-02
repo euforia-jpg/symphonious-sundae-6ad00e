@@ -97,12 +97,104 @@
   function line(i) {
     var p = M.prod(i.id); if (!p) return '';
     var b = M.brand(p.brand);
-    return '<div class="citem">' +
+    var max = M.cartMax(p.id);
+    return '<div class="citem" data-line="' + p.id + '">' +
       M.pimgHTML(p) +
-      '<div class="ci"><div class="cb">' + M.esc(b.name) + '</div>' +
+      '<div class="ci"><div class="cb">' + M.esc(b ? b.name : p.brand) + '</div>' +
       '<div class="cn">' + M.esc(M.nm(p)) + '</div>' +
-      '<div class="cp">' + M.fmt(p.eur) + ' × ' + i.q + '</div></div>' +
+      '<div class="cp">' + M.fmt(p.eur) + ' <span class="qea">' + t('cart.each') + '</span></div>' +
+      '<div class="cqty">' +
+        '<div class="qbox">' +
+          '<button type="button" class="qbtn" data-step="-1" data-id="' + p.id + '" aria-label="' + t('cart.less') + '">−</button>' +
+          '<input class="qn" type="number" inputmode="numeric" min="1" max="' + max + '" step="1" ' +
+            'value="' + i.q + '" data-id="' + p.id + '" aria-label="' + t('cart.qty') + '">' +
+          '<button type="button" class="qbtn" data-step="1" data-id="' + p.id + '" aria-label="' + t('cart.more') + '">+</button>' +
+        '</div>' +
+        '<span class="qlt">' + M.fmtN(M.unit(p.eur) * i.q) + '</span>' +
+        '<span class="qmax" hidden></span>' +
+      '</div></div>' +
       '<button type="button" class="rm" data-rm="' + p.id + '">' + t('cart.remove') + '</button></div>';
+  }
+
+  /* 개수만 바뀌었을 때는 화면을 통째로 다시 그리지 않습니다.
+     다시 그리면 사진을 새로 불러오느라 한 번 깜빡입니다 — 예전에 크게 데인 자리입니다.
+     바뀌어야 하는 것(그 줄의 숫자·금액, 오른쪽 합계, 숨은 주문서 칸)만 고쳐 씁니다. */
+  function refresh(id, capped) {
+    if (!S.cart.length) { draw(); return; }        // 마지막 하나를 뺐으면 빈 화면으로
+    var it = S.cart.filter(function (x) { return x.id === id; })[0];
+    var row = document.querySelector('[data-line="' + id + '"]');
+    if (!it && row) { draw(); return; }            // 한 줄이 통째로 빠졌으면 다시 그립니다
+
+    if (row && it) {
+      var p = M.prod(id);
+      var inp = row.querySelector('.qn');
+      if (inp && String(inp.value) !== String(it.q)) inp.value = it.q;
+      var lt = row.querySelector('.qlt');
+      if (lt) lt.textContent = M.fmtN(M.unit(p.eur) * it.q);
+      var minus = row.querySelector('[data-step="-1"]');
+      if (minus) minus.disabled = it.q <= 1;
+      var plus = row.querySelector('[data-step="1"]');
+      if (plus) plus.disabled = it.q >= M.cartMax(id);
+      var note = row.querySelector('.qmax');
+      if (note) {
+        if (capped) { note.textContent = t('cart.max').replace('{0}', M.cartMax(id)); note.hidden = false; }
+        else note.hidden = true;
+      }
+    }
+    paintSummary();
+    fillForm();
+  }
+
+  function step(id, by) {
+    var now = M.cartQty(id);
+    var want = now + by;
+    var got = M.cartSetQty(id, want);
+    refresh(id, want > got && want > 0);
+  }
+
+  var num = function (n) { return (Math.round(n * 100) / 100).toString(); };
+
+  /* 오른쪽 합계칸. 배송비는 무게로 매깁니다 — 무게를 아직 안 넣은 상품이 하나라도 있으면
+     금액을 함부로 말하지 않고 "주문 후 안내" 로 둡니다. */
+  function summaryHTML() {
+    var st = M.subtotal(), ask = M.shipUnknown(), sf = ask ? 0 : M.shipFee();
+    var w = M.cartKg(), bw = M.billKg();
+    return '<div class="r"><span>' + t('cart.sub') + '</span><span>' + M.fmtN(st) + '</span></div>' +
+      '<div class="r"><span>' + t('cart.ship') + '</span><span>' +
+        (ask ? t('cart.shipAsk') : M.fmtN(sf)) + '</span></div>' +
+      '<div class="r total"><span>' + t('cart.total') + '</span><span>' +
+        M.fmtN(st + sf) + (ask ? ' +' : '') + '</span></div>' +
+      (ask
+        ? '<div class="note">' + t('cart.shipAskNote') + '</div>'
+        : '<div class="note">' + t('cart.shipBasis')
+            .replace('{0}', num(w.kg)).replace('{1}', num(bw))
+            .replace('{2}', M.fmtN(M.unit(M.SHIP.perKg))) +
+          (w.kg < 1 ? '<br>' + t('cart.shipMin') : '') + '</div>') +
+      '<div class="note">' + t('cart.duty') + '</div>' +
+      '<div class="note">' + M.fxLine() + '<br><br>' + t('fx.note') + '</div>';
+  }
+  function paintSummary() {
+    var box = document.getElementById('sumBox');
+    if (box) box.innerHTML = summaryHTML();
+  }
+
+  /* 숨은 주문서 칸 — 손님이 [주문 요청 보내기] 를 누르면 이 내용이 그대로 갑니다.
+     개수를 고치면 여기도 같이 고쳐야 합니다. 안 그러면 화면과 주문서가 어긋납니다. */
+  function fillForm() {
+    var ask = M.shipUnknown(), w = M.cartKg(), bw = M.billKg();
+    document.getElementById('fItems').value = S.cart.map(function (i) {
+      var p = M.prod(i.id); if (!p) return '';
+      return '#' + p.id + ' ' + (p.name.ko || p.name.en) + ' × ' + i.q + ' (€' + p.eur.toFixed(2) + ')';
+    }).filter(Boolean).join(' / ');
+    var eur = S.cart.reduce(function (s, i) {
+      var p = M.prod(i.id); return p ? s + p.eur * i.q : s;
+    }, 0);
+    document.getElementById('fTotal').value =
+      '상품 €' + eur.toFixed(2) +
+      (ask ? ' + 배송비 (무게 확인 필요)'
+           : ' + 배송 €' + M.shipEUR().toFixed(2) + ' (' + num(w.kg) + 'kg → ' + num(bw) + 'kg)' +
+             ' = €' + (eur + M.shipEUR()).toFixed(2));
+    document.getElementById('fLang').value = S.lang;
   }
 
   function draw() {
@@ -118,29 +210,18 @@
       return;
     }
 
-    /* 배송비는 무게로 매깁니다. 무게를 아직 안 넣은 상품이 하나라도 있으면
-       금액을 함부로 말하지 않고 "주문 후 안내" 로 둡니다. */
-    var st = M.subtotal(), ask = M.shipUnknown(), sf = ask ? 0 : M.shipFee();
-    var w = M.cartKg(), bw = M.billKg();
-    var num = function (n) { return (Math.round(n * 100) / 100).toString(); };
-
     body.innerHTML =
       '<div class="cart-grid"><div>' + S.cart.map(line).join('') + '</div>' +
-      '<aside class="summary">' +
-        '<div class="r"><span>' + t('cart.sub') + '</span><span>' + M.fmtN(st) + '</span></div>' +
-        '<div class="r"><span>' + t('cart.ship') + '</span><span>' +
-          (ask ? t('cart.shipAsk') : M.fmtN(sf)) + '</span></div>' +
-        '<div class="r total"><span>' + t('cart.total') + '</span><span>' +
-          M.fmtN(st + sf) + (ask ? ' +' : '') + '</span></div>' +
-        (ask
-          ? '<div class="note">' + t('cart.shipAskNote') + '</div>'
-          : '<div class="note">' + t('cart.shipBasis')
-              .replace('{0}', num(w.kg)).replace('{1}', num(bw))
-              .replace('{2}', M.fmtN(M.unit(M.SHIP.perKg))) +
-            (w.kg < 1 ? '<br>' + t('cart.shipMin') : '') + '</div>') +
-        '<div class="note">' + t('cart.duty') + '</div>' +
-        '<div class="note">' + M.fxLine() + '<br><br>' + t('fx.note') + '</div>' +
-      '</aside></div>';
+      '<aside class="summary" id="sumBox">' + summaryHTML() + '</aside></div>';
+
+    /* 처음 그릴 때 [−] [+] 를 지금 개수에 맞게 켜고 끕니다 */
+    S.cart.forEach(function (i) {
+      var row = document.querySelector('[data-line="' + i.id + '"]');
+      if (!row) return;
+      var m = row.querySelector('[data-step="-1"]'), pl = row.querySelector('[data-step="1"]');
+      if (m) m.disabled = i.q <= 1;
+      if (pl) pl.disabled = i.q >= M.cartMax(i.id);
+    });
 
     sec.hidden = false;
     document.getElementById('fTitle').textContent = t('ord.title');
@@ -154,20 +235,7 @@
       if (req) el.appendChild(req);
     });
 
-    document.getElementById('fItems').value = S.cart.map(function (i) {
-      var p = M.prod(i.id);
-      return '#' + p.id + ' ' + p.name.ko + ' × ' + i.q + ' (€' + p.eur.toFixed(2) + ')';
-    }).join(' / ');
-    var eur = S.cart.reduce(function (s, i) {
-      var p = M.prod(i.id); return p ? s + p.eur * i.q : s;
-    }, 0);
-    document.getElementById('fTotal').value =
-      '상품 €' + eur.toFixed(2) +
-      (ask ? ' + 배송비 (무게 확인 필요)'
-           : ' + 배송 €' + M.shipEUR().toFixed(2) + ' (' + num(w.kg) + 'kg → ' + num(bw) + 'kg)' +
-             ' = €' + (eur + M.shipEUR()).toFixed(2));
-    document.getElementById('fLang').value = S.lang;
-
+    fillForm();
     drawPay();
     var ag = document.getElementById('agreeTxt');
     ag.innerHTML = M.esc(t('ord.agree')) + ' <a href="' + M.link('policy.html', { s: 'cancel' }) +
@@ -206,8 +274,36 @@
   M.boot('cart.html', draw);
 
   document.addEventListener('click', function (e) {
+    var q = e.target.closest('[data-step]');
+    if (q) { step(+q.dataset.id, +q.dataset.step); return; }
     var r = e.target.closest('[data-rm]');
     if (r) { M.cartRemove(+r.dataset.rm); draw(); return; }
+  });
+
+  /* 칸에 직접 적는 경우.
+     적는 도중에는 건드리지 않습니다 — "1" 을 지우고 "12" 를 적으려는데
+     빈 칸이 되자마자 지워 버리면 손님이 놀랍니다. 칸을 벗어날 때 정리합니다. */
+  document.addEventListener('input', function (e) {
+    var el = e.target;
+    if (!el.classList || !el.classList.contains('qn')) return;
+    var v = parseInt(el.value, 10);
+    if (!isFinite(v) || v < 1) return;                  // 아직 다 안 적었을 수 있습니다
+    var id = +el.dataset.id;
+    var got = M.cartSetQty(id, v);
+    refresh(id, v > got);
+  });
+  document.addEventListener('change', function (e) {
+    var el = e.target;
+    if (!el.classList || !el.classList.contains('qn')) return;
+    var id = +el.dataset.id;
+    var v = parseInt(el.value, 10);
+    if (!isFinite(v) || v < 1) {                        // 비웠거나 0 이면 원래대로 되돌립니다
+      el.value = M.cartQty(id) || 1;
+      refresh(id, false);
+      return;
+    }
+    var got = M.cartSetQty(id, v);
+    refresh(id, v > got);
   });
   /* 결제 수단은 화면 전체를 다시 그리지 않고 그 칸만 바꿉니다 (누를 때 깜빡이지 않게). */
   document.addEventListener('change', function (e) {

@@ -103,6 +103,11 @@ window.T = {
 'cart.free':{ko:'무료',es:'Gratis',en:'Free',fr:'Offerte',de:'Kostenlos',it:'Gratis',zh:'免运费'},
 'cart.freeFrom':{ko:'{0} 이상 무료배송',es:'Envío gratis a partir de {0}',en:'Free shipping over {0}',fr:'Livraison offerte dès {0}',de:'Gratisversand ab {0}',it:'Spedizione gratis da {0}',zh:'满 {0} 免运费'},
 'cart.total':{ko:'합계',es:'Total',en:'Total',fr:'Total',de:'Gesamt',it:'Totale',zh:'合计'},
+'cart.qty':{ko:'수량',es:'Cantidad',en:'Quantity',fr:'Quantité',de:'Menge',it:'Quantità',zh:'数量'},
+'cart.each':{ko:'개당',es:'c/u',en:'each',fr:'l’unité',de:'je Stück',it:'cad.',zh:'单价'},
+'cart.less':{ko:'하나 빼기',es:'Quitar uno',en:'Remove one',fr:'Retirer un',de:'Eins weniger',it:'Togli uno',zh:'减一件'},
+'cart.more':{ko:'하나 더',es:'Añadir uno',en:'Add one',fr:'Ajouter un',de:'Eins mehr',it:'Aggiungi uno',zh:'加一件'},
+'cart.max':{ko:'남은 재고가 {0}개입니다',es:'Solo quedan {0} unidades',en:'Only {0} left in stock',fr:'Il ne reste que {0} en stock',de:'Nur noch {0} auf Lager',it:'Ne restano solo {0}',zh:'库存仅剩 {0} 件'},
 'cart.remove':{ko:'삭제',es:'Quitar',en:'Remove',fr:'Retirer',de:'Entfernen',it:'Rimuovi',zh:'删除'},
 'cart.duty':{ko:'관세·부가세는 도착 국가 규정에 따라 수령 시 별도로 부과될 수 있습니다.',es:'Los aranceles e IVA pueden aplicarse a la entrega según el país de destino.',en:'Duties and VAT may be charged on delivery, depending on the destination country.',fr:'Des droits de douane et la TVA peuvent s’appliquer à la livraison selon le pays.',de:'Zoll und Mehrwertsteuer können je nach Zielland bei Lieferung anfallen.',it:'Dazi e IVA possono essere applicati alla consegna, secondo il paese di destinazione.',zh:'关税及增值税可能于收货时按目的国规定另行征收。'},
 
