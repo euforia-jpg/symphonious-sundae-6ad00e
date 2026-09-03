@@ -209,3 +209,45 @@ window.CARRIERS = [
   { id: 'cj', name: { ko: 'CJ대한통운 (한국 국내)', es: 'CJ Logistics (Corea)', en: 'CJ Logistics (Korea)' },
     url: 'https://trace.cjlogistics.com/next/tracking.html?wblNo={n}' }
 ];
+
+/* ─────────────────────────────────────────────────────────────
+   쓰레드(Threads) 자동 게시
+
+   서버(netlify/functions/threads.js)가 정한 요일·시각에 이 설정을 읽어
+   상품 하나를 골라 사진 + 글 + 상품 링크로 올립니다.
+   문구는 대쉬보드 [쓰레드] 탭에서 고치실 수 있습니다.
+
+   글 안에서 쓸 수 있는 자리표:
+     {name} 상품 이름      {tag}   한 줄 소개
+     {brand} 생산자 이름   {loc}   생산지
+     {won} 원화 가격       {eur}   유로 가격
+     {g}    용량·무게      {link}  상품 페이지 주소
+     {tags} 해시태그 (아래 tags 목록)
+
+   같은 상품·같은 문구가 붙어 나오지 않도록 상품과 문구를
+   서로 다른 보폭으로 돌립니다. 문구를 여러 개 둘수록 덜 겹칩니다.
+   ───────────────────────────────────────────────────────────── */
+window.THREADS = {
+  on: true,
+  hall: 'es',                 // 어느 관의 상품을 올릴지 (es = Europa)
+  days: [1, 3, 5],            // 0=일 1=월 … 6=토
+  hourKST: 20,                // 한국 시각 기준 시
+  tags: ['#유럽직구', '#스페인직구', '#해외직구', '#올리브오일', '#메디테라네오'],
+  posts: [
+    '{name}\n\n{tag}\n\n{brand} · {loc}\n{won} ({eur}) · {g}\n\n남유럽에서 항공으로 바로 보냅니다.\n{link}\n\n{tags}',
+
+    '{loc}에서 왔습니다.\n\n{name}\n{tag}\n\n{won} ({eur}) · {g}\n{link}\n\n{tags}',
+
+    '오늘 소개할 것 — {name}\n\n{tag}\n\n만든 곳은 {brand}, {loc} 입니다.\n{won} ({eur})\n\n{link}\n\n{tags}',
+
+    '{brand}의 {name}\n\n{tag}\n\n{g} · {won} ({eur})\n주문하시면 항공편으로 한국까지 보내 드립니다.\n\n{link}\n\n{tags}',
+
+    '{name} · {g}\n\n{tag}\n\n{won} ({eur})\n{loc}에서 직접 골라 담았습니다.\n\n{link}\n\n{tags}',
+
+    '현지에서는 이렇게 먹습니다 — {name}\n\n{tag}\n\n{brand}, {loc}\n{won} ({eur}) · {g}\n\n{link}\n\n{tags}',
+
+    '{name}\n{tag}\n\n{won} ({eur})\n\n{link}\n\n{tags}',
+
+    '{loc}의 {brand}.\n\n{name} — {tag}\n\n{g} · {won} ({eur})\n항공 직송, 관세·부가세는 도착 국가 규정에 따릅니다.\n\n{link}\n\n{tags}'
+  ]
+};

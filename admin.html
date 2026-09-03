@@ -282,6 +282,7 @@ var BASE_PAYM = window.PAYMETHODS || [];
 var BASE_CARR = window.CARRIERS   || [];
 var BASE_CT   = window.CONTACT    || { kakao: '', kakaoOn: true };
 var BASE_SHIP = window.SHIPPING   || { perKg: 15, step: 1, minKg: 1 };
+var BASE_THR  = window.THREADS    || { on: false, hall: 'es', days: [1, 3, 5], hourKST: 20, tags: [], posts: [] };
 var BASE_FX = { base: window.FX.base, buffer: window.FX.buffer, at: window.FX.at, source: window.FX.source };
 
 /* 저장된 변경분 */
@@ -317,7 +318,9 @@ function paymEdit() { if (!D.paym) D.paym = clone(BASE_PAYM); return D.paym; }
 function carrEdit() { if (!D.carr) D.carr = clone(BASE_CARR); return D.carr; }
 function ctEdit()   { if (!D.ct)   D.ct   = clone(BASE_CT);   return D.ct; }
 function shipEdit() { if (!D.ship) D.ship = clone(BASE_SHIP); return D.ship; }
-function infoDirty() { return !!(D.pol || D.paym || D.carr || D.ct || D.ship); }
+function thrNow()  { return D.thr  || BASE_THR; }
+function thrEdit() { if (!D.thr)  D.thr  = clone(BASE_THR);  return D.thr; }
+function infoDirty() { return !!(D.pol || D.paym || D.carr || D.ct || D.ship || D.thr); }
 
 /* 새로 넣은 상품이 이미 data.js 에 들어갔는지 봅니다.
    올리고 나서 [정리]를 안 누르면 임시 저장소에 그대로 남아,
@@ -447,6 +450,7 @@ var TABS = [
   ['fx',    '환율'],
   ['order', '주문'],
   ['info',  '안내·결제'],
+  ['thr',   '쓰레드'],
   ['deploy','반영·배포'],
   ['set',   '설정']
 ];
@@ -1343,6 +1347,125 @@ function vOrder() {
   );
 }
 
+/* ---------- 쓰레드 ---------- */
+var THRKEY = 'me_admin_thrkey';        // 게시 열쇠 — 이 브라우저에만 둡니다
+
+function vThr() {
+  var T = thrNow(), P = merged();
+  var DAYN = ['일', '월', '화', '수', '목', '금', '토'];
+  function kpi(k, v, n, cls) {
+    return '<div class="kpi ' + (cls || '') + '"><div class="k">' + k + '</div><div class="v">' + v + '</div><div class="n">' + n + '</div></div>';
+  }
+
+  /* 올릴 수 있는 상품과, 빠진 상품의 이유 */
+  var ok = [], out = [];
+  P.forEach(function (p) {
+    var why = [];
+    if (p.hidden) why.push('숨김');
+    if ((p.hall || 'es') !== (T.hall || 'es')) why.push('다른 관');
+    if (!p.eur) why.push('가격 없음');
+    if (!(parseInt(p.stock, 10) > 0)) why.push('재고 0');
+    if (!photosOf(p).length) why.push('사진 없음');
+    if (why.length) out.push({ p: p, why: why }); else ok.push(p);
+  });
+
+  view(
+    '<h2 class="sec">쓰레드</h2><p class="sub">정해진 요일·시각에 상품을 하나씩 골라 사진·소개·상품 링크로 올립니다. ' +
+      '사장님이 매번 글을 쓰지 않으셔도 됩니다.</p>' +
+
+    '<div class="cards">' +
+      kpi('상태', T.on === false ? '꺼짐' : '켜짐', '월·수·금 저녁 8시 (한국 시각)') +
+      kpi('올릴 수 있는 상품', ok.length + '개', out.length ? out.length + '개는 빠졌습니다' : '전부 올라갑니다') +
+      kpi('문구 틀', (T.posts || []).length + '개', '많을수록 덜 겹칩니다') +
+      kpi('한 상품이 다시 나오기까지', ok.length ? (ok.length + '번') : '—',
+          ok.length ? '약 ' + Math.round(ok.length * 7 / 3) + '일' : '상품을 채워 주세요') +
+    '</div>' +
+
+    '<div class="panel"><h3>지금 상태 확인</h3>' +
+      '<p class="hint">넷리파이에 열쇠와 토큰이 제대로 들어갔는지, 오늘 어떤 글이 나갈지 봅니다. ' +
+      '미리보기는 <b>올리지 않습니다</b> — 글만 보여 줍니다.</p>' +
+      '<div class="row">' +
+        '<button class="btn" id="thrPing">준비 상태</button>' +
+        '<button class="btn primary" id="thrPrev">오늘 나갈 글 미리보기</button>' +
+        '<span class="pmeta" id="thrMsg"></span></div>' +
+      '<pre id="thrOut" style="display:none;white-space:pre-wrap;word-break:break-word;background:var(--surface2);' +
+        'border:1px solid var(--line);border-radius:10px;padding:13px;margin-top:12px;font-size:13px;line-height:1.6"></pre>' +
+    '</div>' +
+
+    '<div class="panel"><h3>지금 하나 올려보기</h3>' +
+      '<p class="hint">진짜로 쓰레드에 올라갑니다. 처음 한 번만 눌러 보고, 그 뒤로는 알아서 돌아갑니다.<br>' +
+      '열쇠는 넷리파이 환경변수 THREADS_HOOK_KEY 에 넣어 두신 값과 같아야 합니다. ' +
+      '<b>이 브라우저에만</b> 저장되고 어디로도 보내지 않습니다.</p>' +
+      '<label class="fld"><span>게시 열쇠</span><input type="password" id="thrKey" value="' + esc(LS.get(THRKEY, '')) + '" placeholder="THREADS_HOOK_KEY 와 같은 값"></label>' +
+      '<div class="row"><button class="btn" id="thrPost">지금 하나 올리기</button>' +
+      '<button class="btn" id="thrKeyClr">열쇠 지우기</button></div>' +
+    '</div>' +
+
+    '<div class="panel"><h3>켜기 · 끄기</h3>' +
+      '<label class="fld"><span>자동 게시</span><select id="thr_on">' +
+        '<option value="1"' + (T.on !== false ? ' selected' : '') + '>켬 — 정해진 요일에 자동으로 올립니다</option>' +
+        '<option value="0"' + (T.on === false ? ' selected' : '') + '>끔 — 아무것도 올리지 않습니다</option></select></label>' +
+      '<label class="fld"><span>해시태그 (쉼표로 나눠 적으세요)</span>' +
+        '<input id="thr_tags" value="' + esc((T.tags || []).join(', ')) + '" placeholder="#유럽직구, #스페인직구"></label>' +
+      '<p class="hint">요일·시각을 바꾸시려면 <b>netlify/functions/threads-cron.js</b> 의 schedule 한 줄을 고쳐 다시 배포해야 합니다. ' +
+      '지금은 ' + (T.days || [1, 3, 5]).map(function (d) { return DAYN[d]; }).join('·') + ' 저녁 ' + (T.hourKST || 20) + '시입니다.</p>' +
+      '<div class="row"><button class="btn primary" id="thrSave">저장</button>' +
+      '<button class="btn" id="thrReset">원래대로</button></div></div>' +
+
+    '<div class="panel"><h3>문구 틀 <span class="pill ok">' + (T.posts || []).length + '개</span></h3>' +
+      '<p class="hint">상품과 문구를 서로 다른 보폭으로 돌립니다. 틀이 많을수록 같은 조합이 늦게 돌아옵니다.<br>' +
+      '쓸 수 있는 자리표: <b>{name}</b> 상품 이름 · <b>{tag}</b> 한 줄 소개 · <b>{brand}</b> 생산자 · <b>{loc}</b> 생산지 · ' +
+      '<b>{won}</b> 원화 · <b>{eur}</b> 유로 · <b>{g}</b> 용량 · <b>{link}</b> 상품 주소 · <b>{tags}</b> 해시태그<br>' +
+      '<b style="color:var(--bad)">없는 사실을 적지 마십시오.</b> 상품 정보에 있는 것만 자리표로 넣으면 틀릴 일이 없습니다.</p>' +
+      (T.posts || []).map(function (x, i) {
+        return '<label class="fld"><span>' + (i + 1) + '번' +
+          ' <b class="autotag">' + String(x).length + '자</b></span>' +
+          '<textarea data-thr="' + i + '" rows="6">' + esc(x) + '</textarea></label>';
+      }).join('') +
+      '<div class="row"><button class="btn" id="thrAdd">＋ 문구 추가</button>' +
+      '<button class="btn danger" id="thrDel">마지막 문구 지우기</button>' +
+      '<button class="btn primary" id="thrSaveP">문구 저장</button></div></div>' +
+
+    '<div class="panel"><h3>올라가는 상품 (' + ok.length + ')</h3>' +
+      (ok.length
+        ? '<div class="tblwrap" style="box-shadow:none"><table style="min-width:0"><thead><tr><th style="width:60px">번호</th><th>상품</th><th style="width:110px">재고</th></tr></thead><tbody>' +
+          ok.map(function (p) { return '<tr><td class="pmeta">' + esc(p.id) + '</td><td>' + esc(nm(p)) + '</td><td class="pmeta">' + (p.stock || 0) + '</td></tr>'; }).join('') +
+          '</tbody></table></div>'
+        : '<p class="hint" style="color:var(--bad)"><b>올릴 상품이 하나도 없습니다.</b> 재고·가격·사진이 있는 상품이 있어야 합니다.</p>') +
+      (out.length
+        ? '<p class="hint" style="margin-top:14px"><b>빠진 상품</b></p>' +
+          out.map(function (o) {
+            return '<div class="pmeta" style="margin:3px 0">' + esc(nm(o.p)) + ' — ' +
+              o.why.map(function (w) { return '<span class="pill warn" style="margin-right:3px">' + w + '</span>'; }).join('') + '</div>';
+          }).join('')
+        : '') +
+    '</div>' +
+
+    '<div class="note"><b>스팸으로 걸리지 않으려면.</b> 같은 상품을 같은 문구로 되풀이하면 계정이 제한될 수 있습니다. ' +
+      '상품이 5개일 때 주 3회면 한 상품이 약 12일마다 돌아오고, 그때 문구도 달라집니다. ' +
+      '상품이 늘수록 더 안전해지니, 새 상품을 넣으실 때마다 여기 숫자를 한 번 봐 주세요. ' +
+      '사람 손으로 쓴 글(먹는 법, 현지 이야기, 사진)을 사이사이 섞어 올리시면 가장 좋습니다.</div>'
+  );
+}
+
+function thrShow(txt) {
+  var el = document.getElementById('thrOut');
+  if (!el) return;
+  el.style.display = 'block';
+  el.textContent = txt;
+}
+function thrCall(qs, msg, done) {
+  var m = document.getElementById('thrMsg');
+  if (m) m.textContent = msg;
+  fetch('/api/threads' + qs, { cache: 'no-store' })
+    .then(function (r) { return r.json(); })
+    .then(function (j) { if (m) m.textContent = ''; done(j); })
+    .catch(function () {
+      if (m) m.textContent = '';
+      thrShow('창구를 못 불렀습니다.\n\nnetlify/functions/threads.js 와 threads-cron.js 를 올리고 배포하셨는지 확인해 주세요.');
+    });
+}
+
 /* ---------- 반영·배포 ---------- */
 function vDeploy() {
   var n = Object.keys(D.p).length, a = pendingAdds().length;
@@ -1643,13 +1766,16 @@ function buildPolicyJs() {
   L.push('window.SHIPPING = ' + JSON.stringify(shipNow()) + ';');
   L.push('window.CONTACT = ' + JSON.stringify(ctNow(), null, 1) + ';');
   L.push('window.CARRIERS = ' + JSON.stringify(carrNow(), null, 1) + ';');
+  /* 쓰레드 설정은 "원래 있었을 때만" 다시 씁니다.
+     낡은 policy.js 를 읽은 채로 배포하면 애써 적은 문구가 빈 값으로 덮어써집니다. */
+  if (window.THREADS || D.thr) L.push('window.THREADS = ' + JSON.stringify(thrNow(), null, 1) + ';');
   return L.join('\n') + '\n';
 }
 
 /* =========================== 그리기 =========================== */
 function render() {
   paintTabs(); paintBar();
-  ({ home: vHome, prod: vProd, media: vMedia, edit: vEdit, lang: vLang, fx: vFx, order: vOrder, info: vInfo, deploy: vDeploy, set: vSet }[TAB])();
+  ({ home: vHome, prod: vProd, media: vMedia, edit: vEdit, lang: vLang, fx: vFx, order: vOrder, info: vInfo, thr: vThr, deploy: vDeploy, set: vSet }[TAB])();
   if (window.MEDIA) window.MEDIA.hydrate(document);
   if (MISS === null && (TAB === 'media' || TAB === 'deploy' || TAB === 'home')) {
     checkFiles(function () { if (TAB === 'media' || TAB === 'deploy' || TAB === 'home') render(); });
@@ -1706,6 +1832,77 @@ document.addEventListener('click', function (e) {
   }
   if (e.target.id === 'fxReset') { D.fx = null; save(); render(); toast('원래 환율로 되돌렸습니다'); return; }
   if (e.target.id === 'fxFetch') { fetchRate(); return; }
+
+  /* ----- 쓰레드 ----- */
+  if (e.target.id === 'thrPing') {
+    thrCall('', '물어보는 중…', function (j) {
+      thrShow('준비 상태\n' +
+        '  쓰레드 사용자번호  ' + (j['사용자번호'] || '—') + '\n' +
+        '  토큰               ' + (j['토큰'] || '—') + '\n' +
+        '  게시 열쇠          ' + (j['열쇠'] || '—') + '\n' +
+        '  오늘(한국)         ' + (j['오늘'] || '—') +
+        (j['사용자번호'] === '있음' && j['토큰'] === '있음' && j['열쇠'] === '있음'
+          ? '\n\n다 됐습니다. [오늘 나갈 글 미리보기] 를 눌러 보세요.'
+          : '\n\n넷리파이 → Site configuration → Environment variables 에서\nTHREADS_USER_ID · THREADS_TOKEN · THREADS_HOOK_KEY 를 넣어 주세요.'));
+    });
+    return;
+  }
+  if (e.target.id === 'thrPrev') {
+    thrCall('?preview=1', '만드는 중…', function (j) {
+      if (!j.ok) { thrShow('올릴 수 없습니다 — ' + (j.why || '알 수 없음')); return; }
+      thrShow('오늘 ' + j.date + ' 에 나갈 글\n' +
+        '상품 ' + j.productId + ' · ' + (j.product || '') + '\n' +
+        '후보 ' + j.pool + '개 중 ' + (j.index % j.pool + 1) + '번째 · 문구 ' + (j.template + 1) + '번\n' +
+        '사진 ' + (j.image || '(없음)') + '\n' +
+        '\n──────────\n' + j.text + '\n──────────\n' + j.text.length + '자 (500자까지)');
+    });
+    return;
+  }
+  if (e.target.id === 'thrPost') {
+    var k = document.getElementById('thrKey').value.trim();
+    if (k.length < 12) return toast('열쇠를 넣어 주세요 (12자 이상)');
+    if (!confirm('진짜로 쓰레드에 올립니다. 계속할까요?')) return;
+    LS.set(THRKEY, k);
+    thrCall('?post=1&key=' + encodeURIComponent(k), '올리는 중… (사진 때문에 1분까지 걸립니다)', function (j) {
+      if (!j.ok) { thrShow('못 올렸습니다 — ' + (j.why || '알 수 없음')); return; }
+      thrShow('올렸습니다.\n글 번호 ' + j.posted + '\n상품 ' + j.productId + '\n\n' + j.text);
+      toast('쓰레드에 올렸습니다');
+    });
+    return;
+  }
+  if (e.target.id === 'thrKeyClr') { LS.del(THRKEY); render(); toast('열쇠를 지웠습니다'); return; }
+  if (e.target.id === 'thrSave') {
+    var T = thrEdit();
+    T.on = document.getElementById('thr_on').value === '1';
+    T.tags = document.getElementById('thr_tags').value.split(',')
+      .map(function (x) { return x.trim(); }).filter(Boolean);
+    save(); render(); toast('저장했습니다 — [반영·배포] 를 해야 실제로 바뀝니다');
+    return;
+  }
+  if (e.target.id === 'thrReset') { D.thr = null; save(); render(); toast('원래대로 되돌렸습니다'); return; }
+  if (e.target.id === 'thrSaveP') {
+    var T2 = thrEdit(), arr = [];
+    document.querySelectorAll('[data-thr]').forEach(function (el) {
+      var v = el.value.trim(); if (v) arr.push(v);
+    });
+    if (!arr.length) return toast('문구가 하나는 있어야 합니다');
+    T2.posts = arr; save(); render();
+    toast(arr.length + '개 저장했습니다 — [반영·배포] 를 해야 실제로 바뀝니다');
+    return;
+  }
+  if (e.target.id === 'thrAdd') {
+    var T3 = thrEdit();
+    document.querySelectorAll('[data-thr]').forEach(function (el, i) { T3.posts[i] = el.value; });
+    T3.posts.push('{name}\n\n{tag}\n\n{won} ({eur}) · {g}\n{link}\n\n{tags}');
+    save(); render(); return;
+  }
+  if (e.target.id === 'thrDel') {
+    var T4 = thrEdit();
+    if (T4.posts.length <= 1) return toast('마지막 하나는 남겨 두어야 합니다');
+    document.querySelectorAll('[data-thr]').forEach(function (el, i) { T4.posts[i] = el.value; });
+    T4.posts.pop(); save(); render(); return;
+  }
+
   if (e.target.id === 'fxLive') { fxLive(false); return; }
 
   /* 주문 */
