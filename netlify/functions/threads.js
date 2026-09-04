@@ -76,12 +76,14 @@ function won(eur, rate) {
   return '₩' + (Math.round(eur * rate / 10) * 10).toLocaleString('ko-KR');
 }
 
-function fill(tpl, p, b, rate, tags) {
+function fill(tpl, p, b, rate, tags, lang) {
+  const L = lang || 'ko';
+  const pick = (o) => (o && (o[L] || o.en || o.ko)) || '';
   const url = site() + '/product.html?id=' + encodeURIComponent(p.id) +
-              '&lang=ko&hall=' + (p.hall || 'es') + '&utm_source=threads';
+              '&lang=' + L + '&hall=' + (p.hall || 'es') + '&utm_source=threads';
   const v = {
-    name: (p.name && (p.name.ko || p.name.en)) || '',
-    tag: (p.tag && (p.tag.ko || p.tag.en)) || '',
+    name: pick(p.name),
+    tag: pick(p.tag),
     brand: (b && b.name) || '',
     loc: (b && b.loc) || p.origin || '',
     won: won(p.eur, rate),
@@ -113,11 +115,19 @@ async function planToday(when) {
   const list = pool(D.PRODUCTS || [], T.hall || 'es');
   if (!list.length) return { ok: false, why: '올릴 수 있는 상품이 없습니다 (재고·가격·사진을 확인해 주세요)' };
 
-  const tpls = (T.posts && T.posts.length) ? T.posts : ['{name}\n{tag}\n{won}\n{link}'];
-
-  /* 상품과 문구를 서로 다른 보폭으로 돌립니다.
-     보폭 3 은 문구 개수와 서로소일 때가 많아 짝이 잘 겹치지 않습니다. */
+  /* 몇 번째 게시인가 → 상품 · 언어 · 문구를 서로 다른 보폭으로 돌립니다. */
   const n = postIndex(T.days, when);
+
+  /* 언어를 번갈아 갑니다. langs 가 없으면 예전처럼 한국어만. */
+  const langs = (T.langs && T.langs.length) ? T.langs : ['ko'];
+  const lang = langs[n % langs.length];
+
+  /* 문구·해시태그는 언어별 목록에서. 없으면 예전 방식(T.posts / T.tags)으로 물러납니다. */
+  const tpls = (T.postsBy && T.postsBy[lang] && T.postsBy[lang].length) ? T.postsBy[lang]
+             : (T.posts && T.posts.length) ? T.posts
+             : ['{name}\n{tag}\n{won}\n{link}'];
+  const tags = (T.tagsBy && T.tagsBy[lang]) ? T.tagsBy[lang] : (T.tags || []);
+
   const p = list[n % list.length];
   const tpl = tpls[(n * 3) % tpls.length];
 
@@ -136,8 +146,8 @@ async function planToday(when) {
     ok: true,
     date: kstDate(when), weekday: kstDay(when), index: n,
     productId: p.id, product: (p.name && p.name.ko) || '',
-    pool: list.length, template: (n * 3) % tpls.length,
-    text: fill(tpl, p, b, rate, T.tags),
+    pool: list.length, lang: lang, template: (n * 3) % tpls.length,
+    text: fill(tpl, p, b, rate, tags, lang),
     image: photo(p)
   };
 }

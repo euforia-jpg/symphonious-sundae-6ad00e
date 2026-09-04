@@ -232,22 +232,53 @@ window.THREADS = {
   hall: 'es',                 // 어느 관의 상품을 올릴지 (es = Europa)
   days: [1, 3, 5],            // 0=일 1=월 … 6=토
   hourKST: 20,                // 한국 시각 기준 시
-  tags: ['#유럽직구', '#스페인직구', '#해외직구', '#올리브오일', '#메디테라네오'],
-  posts: [
-    '{name}\n\n{tag}\n\n{brand} · {loc}\n{won} ({eur}) · {g}\n\n남유럽에서 항공으로 바로 보냅니다.\n{link}\n\n{tags}',
 
-    '{loc}에서 왔습니다.\n\n{name}\n{tag}\n\n{won} ({eur}) · {g}\n{link}\n\n{tags}',
+  /* 올릴 때 쓸 언어. 순서대로 번갈아 갑니다.
+     ['ko'] 만 두면 한국어만, ['ko','en'] 이면 한 번씩 번갈아 나갑니다. */
+  langs: ['ko', 'en'],
 
-    '오늘 소개할 것 — {name}\n\n{tag}\n\n만든 곳은 {brand}, {loc} 입니다.\n{won} ({eur})\n\n{link}\n\n{tags}',
+  /* 해시태그는 언어마다 따로 둡니다.
+     상품마다 다른 말(올리브오일 같은)은 넣지 마십시오 — 비누에도 그 태그가 붙습니다. */
+  tagsBy: {
+    ko: ['#유럽직구', '#스페인직구', '#해외직구', '#메디테라네오'],
+    en: ['#Spain', '#SpanishFood', '#Mediterraneo', '#ShopEurope']
+  },
 
-    '{brand}의 {name}\n\n{tag}\n\n{g} · {won} ({eur})\n주문하시면 항공편으로 한국까지 보내 드립니다.\n\n{link}\n\n{tags}',
+  /* 문구 틀도 언어마다. 상품과 문구를 서로 다른 보폭으로 돌립니다. */
+  postsBy: {
+    ko: [
+      '{name}\n\n{tag}\n\n{brand} · {loc}\n{won} ({eur}) · {g}\n\n남유럽에서 항공으로 바로 보냅니다.\n{link}\n\n{tags}',
 
-    '{name} · {g}\n\n{tag}\n\n{won} ({eur})\n{loc}에서 직접 골라 담았습니다.\n\n{link}\n\n{tags}',
+      '{loc}에서 왔습니다.\n\n{name}\n{tag}\n\n{won} ({eur}) · {g}\n{link}\n\n{tags}',
 
-    '현지에서는 이렇게 먹습니다 — {name}\n\n{tag}\n\n{brand}, {loc}\n{won} ({eur}) · {g}\n\n{link}\n\n{tags}',
+      '오늘 소개할 것 — {name}\n\n{tag}\n\n만든 곳은 {brand}, {loc} 입니다.\n{won} ({eur})\n\n{link}\n\n{tags}',
 
-    '{name}\n{tag}\n\n{won} ({eur})\n\n{link}\n\n{tags}',
+      '{brand}의 {name}\n\n{tag}\n\n{g} · {won} ({eur})\n주문하시면 항공편으로 한국까지 보내 드립니다.\n\n{link}\n\n{tags}',
 
-    '{loc}의 {brand}.\n\n{name} — {tag}\n\n{g} · {won} ({eur})\n항공 직송, 관세·부가세는 도착 국가 규정에 따릅니다.\n\n{link}\n\n{tags}'
-  ]
+      '{name} · {g}\n\n{tag}\n\n{won} ({eur})\n{loc}에서 직접 골라 담았습니다.\n\n{link}\n\n{tags}',
+
+      '현지에서는 이렇게 먹습니다 — {name}\n\n{tag}\n\n{brand}, {loc}\n{won} ({eur}) · {g}\n\n{link}\n\n{tags}',
+
+      '{name}\n{tag}\n\n{won} ({eur})\n\n{link}\n\n{tags}',
+
+      '{loc}의 {brand}.\n\n{name} — {tag}\n\n{g} · {won} ({eur})\n항공 직송, 관세·부가세는 도착 국가 규정에 따릅니다.\n\n{link}\n\n{tags}'
+    ],
+    en: [
+      '{name}\n\n{tag}\n\n{brand} · {loc}\n{eur} · {g}\n\nFlown from southern Europe to Korea.\n{link}\n\n{tags}',
+
+      'Straight from {loc}.\n\n{name}\n{tag}\n\n{eur} · {g}\n{link}\n\n{tags}',
+
+      "Today's pick — {name}\n\n{tag}\n\nMade by {brand} in {loc}.\n{eur}\n\n{link}\n\n{tags}",
+
+      '{brand} · {name}\n\n{tag}\n\n{g} · {eur}\nAir-shipped to Korea once you order.\n\n{link}\n\n{tags}',
+
+      '{name} · {g}\n\n{tag}\n\n{eur}\nPicked out in {loc}.\n\n{link}\n\n{tags}',
+
+      'How they use it at home — {name}\n\n{tag}\n\n{brand}, {loc}\n{eur} · {g}\n\n{link}\n\n{tags}',
+
+      '{name}\n{tag}\n\n{eur}\n\n{link}\n\n{tags}',
+
+      '{brand} of {loc}.\n\n{name} — {tag}\n\n{g} · {eur}\nAir-shipped. Duties and VAT follow the destination country rules.\n\n{link}\n\n{tags}'
+    ]
+  }
 };

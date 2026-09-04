@@ -282,7 +282,8 @@ var BASE_PAYM = window.PAYMETHODS || [];
 var BASE_CARR = window.CARRIERS   || [];
 var BASE_CT   = window.CONTACT    || { kakao: '', kakaoOn: true };
 var BASE_SHIP = window.SHIPPING   || { perKg: 15, step: 1, minKg: 1 };
-var BASE_THR  = window.THREADS    || { on: false, hall: 'es', days: [1, 3, 5], hourKST: 20, tags: [], posts: [] };
+var BASE_THR  = window.THREADS    || { on: false, hall: 'es', days: [1, 3, 5], hourKST: 20,
+                                      langs: ['ko'], tagsBy: { ko: [] }, postsBy: { ko: [] } };
 var BASE_FX = { base: window.FX.base, buffer: window.FX.buffer, at: window.FX.at, source: window.FX.source };
 
 /* 저장된 변경분 */
@@ -494,6 +495,7 @@ function vHome() {
   function kpi(k, v, n, cls) {
     return '<div class="kpi ' + (cls || '') + '"><div class="k">' + k + '</div><div class="v">' + v + '</div><div class="n">' + n + '</div></div>';
   }
+  var LANGS_T = (T.langs && T.langs.length) ? T.langs : ['ko'];
   var rows = [
     ['가격이 아직 없는 상품', noPrice, 'prod', '생산자에게 가격과 용량을 받아 넣으면 바로 팔 수 있습니다.'],
     ['사진이 없는 상품', noImg, 'prod', '사진 없이도 열리지만, 사진이 있는 상품이 훨씬 잘 팔립니다.'],
@@ -1349,6 +1351,47 @@ function vOrder() {
 
 /* ---------- 쓰레드 ---------- */
 var THRKEY = 'me_admin_thrkey';        // 게시 열쇠 — 이 브라우저에만 둡니다
+var LNAME = { ko: '한국어', en: 'English', es: 'Español', fr: 'Français', de: 'Deutsch', it: 'Italiano', zh: '中文' };
+
+/* 언어별 문구·태그를 꺼내 옵니다. 예전 방식(posts/tags)만 있는 설정도 그대로 읽습니다. */
+function tposts(T, L) {
+  if (T.postsBy && T.postsBy[L]) return T.postsBy[L];
+  if (L === 'ko' && T.posts) return T.posts;
+  return [];
+}
+function ttags(T, L) {
+  if (T.tagsBy && T.tagsBy[L]) return T.tagsBy[L];
+  if (L === 'ko' && T.tags) return T.tags;
+  return [];
+}
+/* 고칠 수 있게 새 모양으로 옮겨 둡니다 (예전 설정을 한 번만 바꿔 줍니다) */
+function tEdit(L) {
+  var T = thrEdit();
+  if (!T.postsBy) T.postsBy = {};
+  if (!T.tagsBy) T.tagsBy = {};
+  if (!T.postsBy[L]) T.postsBy[L] = (L === 'ko' && T.posts) ? T.posts.slice() : [];
+  if (!T.tagsBy[L]) T.tagsBy[L] = (L === 'ko' && T.tags) ? T.tags.slice() : [];
+  delete T.posts; delete T.tags;
+  return T;
+}
+
+function tpanel(T, L) {
+  var list = tposts(T, L);
+  return '<div class="panel"><h3>문구 틀 · ' + LNAME[L] + ' <span class="pill ok">' + list.length + '개</span></h3>' +
+    '<p class="hint">상품과 문구를 서로 다른 보폭으로 돌립니다. 틀이 많을수록 같은 조합이 늦게 돌아옵니다.<br>' +
+    '쓸 수 있는 자리표: <b>{name}</b> 상품 이름 · <b>{tag}</b> 한 줄 소개 · <b>{brand}</b> 생산자 · <b>{loc}</b> 생산지 · ' +
+    '<b>{won}</b> 원화 · <b>{eur}</b> 유로 · <b>{g}</b> 용량 · <b>{link}</b> 상품 주소 · <b>{tags}</b> 해시태그<br>' +
+    '<b style="color:var(--bad)">없는 사실을 적지 마십시오.</b> 상품 정보에 있는 것만 자리표로 넣으면 틀릴 일이 없습니다.</p>' +
+    (list.length
+      ? list.map(function (x, i) {
+          return '<label class="fld"><span>' + (i + 1) + '번 <b class="autotag">' + String(x).length + '자</b></span>' +
+            '<textarea data-thr="' + L + ':' + i + '" rows="6">' + esc(x) + '</textarea></label>';
+        }).join('')
+      : '<p class="hint" style="color:var(--bad)"><b>이 언어의 문구가 없습니다.</b> [＋ 문구 추가] 로 하나 이상 만들어 주세요.</p>') +
+    '<div class="row"><button class="btn" data-thradd="' + L + '">＋ 문구 추가</button>' +
+    '<button class="btn danger" data-thrdel="' + L + '">마지막 문구 지우기</button>' +
+    '<button class="btn primary" id="thrSaveP">문구 저장</button></div></div>';
+}
 
 function vThr() {
   var T = thrNow(), P = merged();
@@ -1356,6 +1399,7 @@ function vThr() {
   function kpi(k, v, n, cls) {
     return '<div class="kpi ' + (cls || '') + '"><div class="k">' + k + '</div><div class="v">' + v + '</div><div class="n">' + n + '</div></div>';
   }
+  var LANGS_T = (T.langs && T.langs.length) ? T.langs : ['ko'];
 
   /* 올릴 수 있는 상품과, 빠진 상품의 이유 */
   var ok = [], out = [];
@@ -1376,7 +1420,8 @@ function vThr() {
     '<div class="cards">' +
       kpi('상태', T.on === false ? '꺼짐' : '켜짐', '월·수·금 저녁 8시 (한국 시각)') +
       kpi('올릴 수 있는 상품', ok.length + '개', out.length ? out.length + '개는 빠졌습니다' : '전부 올라갑니다') +
-      kpi('문구 틀', (T.posts || []).length + '개', '많을수록 덜 겹칩니다') +
+      kpi('문구 틀', LANGS_T.map(function (L) { return tposts(T, L).length; }).join(' / ') + '개',
+          LANGS_T.map(function (L) { return LNAME[L]; }).join(' / ')) +
       kpi('한 상품이 다시 나오기까지', ok.length ? (ok.length + '번') : '—',
           ok.length ? '약 ' + Math.round(ok.length * 7 / 3) + '일' : '상품을 채워 주세요') +
     '</div>' +
@@ -1405,26 +1450,25 @@ function vThr() {
       '<label class="fld"><span>자동 게시</span><select id="thr_on">' +
         '<option value="1"' + (T.on !== false ? ' selected' : '') + '>켬 — 정해진 요일에 자동으로 올립니다</option>' +
         '<option value="0"' + (T.on === false ? ' selected' : '') + '>끔 — 아무것도 올리지 않습니다</option></select></label>' +
-      '<label class="fld"><span>해시태그 (쉼표로 나눠 적으세요)</span>' +
-        '<input id="thr_tags" value="' + esc((T.tags || []).join(', ')) + '" placeholder="#유럽직구, #스페인직구"></label>' +
+      '<label class="fld"><span>올릴 언어</span><select id="thr_langs">' +
+        [['ko', '한국어만'], ['ko,en', '한국어 · 영어 번갈아'], ['en', '영어만'], ['ko,en,es', '한국어 · 영어 · 스페인어 번갈아']]
+          .map(function (o) {
+            return '<option value="' + o[0] + '"' + (LANGS_T.join(',') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+          }).join('') + '</select>' +
+        '<span class="hint" style="margin:4px 0 0">번갈아 두면 게시 횟수는 그대로이고 언어만 돌아갑니다. ' +
+        '상품 이름·소개가 그 언어로 채워져 있어야 제대로 나옵니다 — 빈 칸은 영어로 대신 나갑니다.</span></label>' +
+      LANGS_T.map(function (L) {
+        return '<label class="fld"><span>해시태그 · ' + LNAME[L] + ' (쉼표로 나눠 적으세요)</span>' +
+          '<input data-thrtag="' + L + '" value="' + esc(ttags(T, L).join(', ')) + '" placeholder="#유럽직구, #스페인직구"></label>';
+      }).join('') +
+      '<p class="hint"><b>상품마다 다른 말은 태그에 넣지 마십시오.</b> ' +
+      '예를 들어 #올리브오일 을 넣어 두면 비누 세트에도 그 태그가 붙습니다.</p>' +
       '<p class="hint">요일·시각을 바꾸시려면 <b>netlify/functions/threads-cron.js</b> 의 schedule 한 줄을 고쳐 다시 배포해야 합니다. ' +
       '지금은 ' + (T.days || [1, 3, 5]).map(function (d) { return DAYN[d]; }).join('·') + ' 저녁 ' + (T.hourKST || 20) + '시입니다.</p>' +
       '<div class="row"><button class="btn primary" id="thrSave">저장</button>' +
       '<button class="btn" id="thrReset">원래대로</button></div></div>' +
 
-    '<div class="panel"><h3>문구 틀 <span class="pill ok">' + (T.posts || []).length + '개</span></h3>' +
-      '<p class="hint">상품과 문구를 서로 다른 보폭으로 돌립니다. 틀이 많을수록 같은 조합이 늦게 돌아옵니다.<br>' +
-      '쓸 수 있는 자리표: <b>{name}</b> 상품 이름 · <b>{tag}</b> 한 줄 소개 · <b>{brand}</b> 생산자 · <b>{loc}</b> 생산지 · ' +
-      '<b>{won}</b> 원화 · <b>{eur}</b> 유로 · <b>{g}</b> 용량 · <b>{link}</b> 상품 주소 · <b>{tags}</b> 해시태그<br>' +
-      '<b style="color:var(--bad)">없는 사실을 적지 마십시오.</b> 상품 정보에 있는 것만 자리표로 넣으면 틀릴 일이 없습니다.</p>' +
-      (T.posts || []).map(function (x, i) {
-        return '<label class="fld"><span>' + (i + 1) + '번' +
-          ' <b class="autotag">' + String(x).length + '자</b></span>' +
-          '<textarea data-thr="' + i + '" rows="6">' + esc(x) + '</textarea></label>';
-      }).join('') +
-      '<div class="row"><button class="btn" id="thrAdd">＋ 문구 추가</button>' +
-      '<button class="btn danger" id="thrDel">마지막 문구 지우기</button>' +
-      '<button class="btn primary" id="thrSaveP">문구 저장</button></div></div>' +
+    LANGS_T.map(function (L) { return tpanel(T, L); }).join('') +
 
     '<div class="panel"><h3>올라가는 상품 (' + ok.length + ')</h3>' +
       (ok.length
@@ -1852,6 +1896,7 @@ document.addEventListener('click', function (e) {
       if (!j.ok) { thrShow('올릴 수 없습니다 — ' + (j.why || '알 수 없음')); return; }
       thrShow('오늘 ' + j.date + ' 에 나갈 글\n' +
         '상품 ' + j.productId + ' · ' + (j.product || '') + '\n' +
+        '언어 ' + (LNAME[j.lang] || j.lang || '한국어') + '\n' +
         '후보 ' + j.pool + '개 중 ' + (j.index % j.pool + 1) + '번째 · 문구 ' + (j.template + 1) + '번\n' +
         '사진 ' + (j.image || '(없음)') + '\n' +
         '\n──────────\n' + j.text + '\n──────────\n' + j.text.length + '자 (500자까지)');
@@ -1874,33 +1919,65 @@ document.addEventListener('click', function (e) {
   if (e.target.id === 'thrSave') {
     var T = thrEdit();
     T.on = document.getElementById('thr_on').value === '1';
-    T.tags = document.getElementById('thr_tags').value.split(',')
-      .map(function (x) { return x.trim(); }).filter(Boolean);
-    save(); render(); toast('저장했습니다 — [반영·배포] 를 해야 실제로 바뀝니다');
+    var langs = document.getElementById('thr_langs').value.split(',');
+    /* 새로 켠 언어는 문구 칸을 만들어 둡니다 — 비어 있으면 화면이 알려 줍니다 */
+    langs.forEach(function (L) { tEdit(L); });
+    T = thrEdit();
+    T.langs = langs;
+    document.querySelectorAll('[data-thrtag]').forEach(function (el) {
+      var L = el.dataset.thrtag;
+      tEdit(L).tagsBy[L] = el.value.split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+    });
+    save(); render();
+    var empty = langs.filter(function (L) { return !tposts(thrNow(), L).length; });
+    toast(empty.length
+      ? empty.map(function (L) { return LNAME[L]; }).join('·') + ' 문구가 비어 있습니다 — 아래에서 채워 주세요'
+      : '저장했습니다 — [반영·배포] 를 해야 실제로 바뀝니다');
     return;
   }
   if (e.target.id === 'thrReset') { D.thr = null; save(); render(); toast('원래대로 되돌렸습니다'); return; }
-  if (e.target.id === 'thrSaveP') {
-    var T2 = thrEdit(), arr = [];
+  /* 화면에 있는 문구 칸을 전부 걷어 언어별로 담아 둡니다 */
+  function thrCollect() {
+    var by = {};
     document.querySelectorAll('[data-thr]').forEach(function (el) {
-      var v = el.value.trim(); if (v) arr.push(v);
+      var k = String(el.dataset.thr).split(':'), L = k[0];
+      if (!by[L]) by[L] = [];
+      by[L].push(el.value);
     });
-    if (!arr.length) return toast('문구가 하나는 있어야 합니다');
-    T2.posts = arr; save(); render();
-    toast(arr.length + '개 저장했습니다 — [반영·배포] 를 해야 실제로 바뀝니다');
+    Object.keys(by).forEach(function (L) {
+      tEdit(L).postsBy[L] = by[L];
+    });
+    return by;
+  }
+  if (e.target.id === 'thrSaveP') {
+    var by = thrCollect(), n = 0, blank = [];
+    Object.keys(by).forEach(function (L) {
+      var arr = by[L].map(function (x) { return x.trim(); }).filter(Boolean);
+      if (!arr.length) blank.push(LNAME[L]);
+      tEdit(L).postsBy[L] = arr;
+      n += arr.length;
+    });
+    if (blank.length) return toast(blank.join('·') + ' 문구가 비었습니다 — 하나는 있어야 합니다');
+    save(); render();
+    toast(n + '개 저장했습니다 — [반영·배포] 를 해야 실제로 바뀝니다');
     return;
   }
-  if (e.target.id === 'thrAdd') {
-    var T3 = thrEdit();
-    document.querySelectorAll('[data-thr]').forEach(function (el, i) { T3.posts[i] = el.value; });
-    T3.posts.push('{name}\n\n{tag}\n\n{won} ({eur}) · {g}\n{link}\n\n{tags}');
+  var ta = e.target.closest('[data-thradd]');
+  if (ta) {
+    var La = ta.dataset.thradd;
+    thrCollect();
+    tEdit(La).postsBy[La].push(La === 'en'
+      ? '{name}\n\n{tag}\n\n{eur} · {g}\n{link}\n\n{tags}'
+      : '{name}\n\n{tag}\n\n{won} ({eur}) · {g}\n{link}\n\n{tags}');
     save(); render(); return;
   }
-  if (e.target.id === 'thrDel') {
-    var T4 = thrEdit();
-    if (T4.posts.length <= 1) return toast('마지막 하나는 남겨 두어야 합니다');
-    document.querySelectorAll('[data-thr]').forEach(function (el, i) { T4.posts[i] = el.value; });
-    T4.posts.pop(); save(); render(); return;
+  var td = e.target.closest('[data-thrdel]');
+  if (td) {
+    var Ld = td.dataset.thrdel;
+    thrCollect();
+    var arr2 = tEdit(Ld).postsBy[Ld];
+    if (arr2.length <= 1) return toast('마지막 하나는 남겨 두어야 합니다');
+    arr2.pop(); save(); render(); return;
   }
 
   if (e.target.id === 'fxLive') { fxLive(false); return; }
