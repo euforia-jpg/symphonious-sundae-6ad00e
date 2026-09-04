@@ -264,13 +264,13 @@ window.THREADS = {
       '{loc}의 {brand}.\n\n{name} — {tag}\n\n{g} · {won} ({eur})\n항공 직송, 관세·부가세는 도착 국가 규정에 따릅니다.\n\n{link}\n\n{tags}'
     ],
     en: [
-      '{name}\n\n{tag}\n\n{brand} · {loc}\n{eur} · {g}\n\nFlown from southern Europe to Korea.\n{link}\n\n{tags}',
+      '{name}\n\n{tag}\n\n{brand} · {loc}\n{eur} · {g}\n\nAir-shipped from Spain once you order.\n{link}\n\n{tags}',
 
       'Straight from {loc}.\n\n{name}\n{tag}\n\n{eur} · {g}\n{link}\n\n{tags}',
 
       "Today's pick — {name}\n\n{tag}\n\nMade by {brand} in {loc}.\n{eur}\n\n{link}\n\n{tags}",
 
-      '{brand} · {name}\n\n{tag}\n\n{g} · {eur}\nAir-shipped to Korea once you order.\n\n{link}\n\n{tags}',
+      '{brand} · {name}\n\n{tag}\n\n{g} · {eur}\nAir-shipped from Spain once you order.\n\n{link}\n\n{tags}',
 
       '{name} · {g}\n\n{tag}\n\n{eur}\nPicked out in {loc}.\n\n{link}\n\n{tags}',
 
@@ -278,7 +278,7 @@ window.THREADS = {
 
       '{name}\n{tag}\n\n{eur}\n\n{link}\n\n{tags}',
 
-      '{brand} of {loc}.\n\n{name} — {tag}\n\n{g} · {eur}\nAir-shipped. Duties and VAT follow the destination country rules.\n\n{link}\n\n{tags}'
+      '{brand} of {loc}.\n\n{name} — {tag}\n\n{g} · {eur}\nAir-shipped from Spain once you order. Duties and VAT follow the destination country rules.\n\n{link}\n\n{tags}'
     ]
   }
 };
