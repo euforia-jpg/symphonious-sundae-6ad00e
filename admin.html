@@ -246,7 +246,6 @@ summary:focus-visible{outline:2px solid color-mix(in srgb,var(--cobalt) 50%,tran
 <script src="assets/i18n.js"></script>
 <script src="assets/data.js"></script>
 <script src="assets/policy.js"></script>
-<script src="assets/tours.js"></script>
 <script src="assets/media.js"></script>
 <script>
 (function () {
@@ -285,9 +284,14 @@ var BASE_CT   = window.CONTACT    || { kakao: '', kakaoOn: true };
 var BASE_SHIP = window.SHIPPING   || { perKg: 15, step: 1, minKg: 1 };
 var BASE_THR  = window.THREADS    || { on: false, hall: 'es', days: [1, 3, 5], hourKST: 20,
                                       langs: ['ko'], tagsBy: { ko: [] }, postsBy: { ko: [] } };
-var BASE_TOURS = window.TOURS || [];
-var BASE_TT    = window.TOURTHREADS || { on: false, days: [2, 4], hourKST: 20, langs: ['ko'],
-                                         kakao: '', tagsBy: { ko: [] }, postsBy: { ko: [] } };
+/* 여행 상품은 쇼핑몰에 올리지 않기로 했습니다.
+   그래서 다른 자료와 달리 이 페이지에 딸려 오지 않고,
+   서버(netlify/functions/tours-data.js)에서 게시 열쇠로 받아 옵니다.
+   TLOAD 가 'ok' 가 되기 전에는 아무것도 내보내지 않습니다 — 빈 목록으로 덮어쓰면 안 됩니다. */
+var BASE_TOURS = [];
+var BASE_TT    = { on: true, days: [2, 4], hourKST: 20, langs: ['ko'],
+                   kakao: '', tagsBy: { ko: [] }, postsBy: { ko: [] } };
+var TLOAD = 'idle', TLOADWHY = '';
 var BASE_FX = { base: window.FX.base, buffer: window.FX.buffer, at: window.FX.at, source: window.FX.source };
 
 /* 저장된 변경분 */
@@ -329,7 +333,33 @@ function toursNow()  { return D.tours || BASE_TOURS; }
 function toursEdit() { if (!D.tours) D.tours = clone(BASE_TOURS); return D.tours; }
 function ttNow()     { return D.tt   || BASE_TT; }
 function ttEdit()    { if (!D.tt)   D.tt   = clone(BASE_TT);   return D.tt; }
-function toursDirty(){ return !!(D.tours || D.tt); }
+/* 서버에서 제대로 받아 온 뒤에만 내보냅니다 */
+function toursDirty(){ return TLOAD === 'ok' && !!(D.tours || D.tt); }
+
+/* 여행 일정을 서버에서 받아 옵니다. 열쇠를 아는 사람만 볼 수 있는 창구입니다. */
+function tourLoad(again) {
+  if (TLOAD === 'loading') return;
+  if (TLOAD === 'ok' && !again) return;
+  var k = LS.get(THRKEY, '');
+  if (!k) { TLOAD = 'nokey'; TLOADWHY = '[쓰레드] 탭에서 게시 열쇠를 먼저 넣어 주세요'; if (TAB === 'tour') render(); return; }
+  TLOAD = 'loading'; if (TAB === 'tour') render();
+  fetch('/api/threads?ch=tour&data=1&key=' + encodeURIComponent(k), { cache: 'no-store' })
+    .then(function (r) { return r.json(); })
+    .then(function (j) {
+      if (!j || !j.ok) { TLOAD = 'fail'; TLOADWHY = (j && j.why) || '알 수 없는 까닭'; }
+      else {
+        BASE_TOURS = j.TOURS || [];
+        if (j.TOURTHREADS) BASE_TT = j.TOURTHREADS;
+        TLOAD = 'ok'; TLOADWHY = '';
+      }
+      if (TAB === 'tour') render();
+    })
+    .catch(function () {
+      TLOAD = 'fail';
+      TLOADWHY = '창구를 못 불렀습니다 — netlify/functions 파일을 올리고 배포하셨는지 확인해 주세요';
+      if (TAB === 'tour') render();
+    });
+}
 function infoDirty() { return !!(D.pol || D.paym || D.carr || D.ct || D.ship || D.thr); }
 
 /* 새로 넣은 상품이 이미 data.js 에 들어갔는지 봅니다.
@@ -1538,15 +1568,21 @@ function thrCall(qs, msg, done) {
 }
 
 /* ---------- 여행사 ---------- */
+var TOURPATH = 'netlify/functions/tours-data.js';
+
 function buildToursJs() {
   var L = [];
   L.push('/* 유포리아투어 — 여행 상품과 쓰레드 자동 게시 설정.');
-  L.push('   관리자 대쉬보드 [여행사] 탭에서 내보냈습니다: ' + new Date().toISOString().slice(0, 10) + ' */');
-  L.push('window.TOURS = [');
+  L.push('   관리자 대쉬보드 [여행사] 탭에서 내보냈습니다: ' + new Date().toISOString().slice(0, 10));
+  L.push('');
+  L.push('   ★ 이 파일은 netlify/functions 폴더에 있어야 합니다.');
+  L.push('     그 폴더의 파일은 서버 안에서만 돌고 손님에게 내려가지 않습니다.');
+  L.push('     assets 폴더로 옮기면 주소를 아는 누구나 열어 볼 수 있게 됩니다. */');
+  L.push('export const TOURS = [');
   toursNow().forEach(function (t) { L.push('  ' + JSON.stringify(t) + ','); });
   L.push('];');
   L.push('');
-  L.push('window.TOURTHREADS = ' + JSON.stringify(ttNow(), null, 1) + ';');
+  L.push('export const TOURTHREADS = ' + JSON.stringify(ttNow(), null, 1) + ';');
   return L.join('\n') + '\n';
 }
 
@@ -1570,10 +1606,38 @@ function vTour() {
   }
   var live = list.filter(function (t) { return t.on !== false && tnm(t) !== '(이름 없음)'; });
 
+  /* 서버에서 아직 못 받아 왔으면 목록을 보여 주지 않습니다.
+     빈 화면을 보고 새로 넣으시면 원래 있던 일정을 덮어쓰게 됩니다. */
+  if (TLOAD !== 'ok') {
+    var head = '<h2 class="sec">여행사</h2><p class="sub">유포리아투어 쓰레드 계정입니다. ' +
+      '여행 상품은 쇼핑몰에 올리지 않고 서버 안에만 둡니다.</p>';
+    if (TLOAD === 'loading' || TLOAD === 'idle') {
+      return view(head + '<div class="panel"><h3>여행 일정을 받아 오는 중입니다…</h3>' +
+        '<p class="hint">여행 상품은 이 화면에 딸려 오지 않고 서버에서 따로 받아 옵니다. ' +
+        '손님이 주소로 열어 볼 수 없게 하려고 그렇게 해 두었습니다.</p></div>');
+    }
+    if (TLOAD === 'nokey') {
+      return view(head + '<div class="panel"><h3>게시 열쇠가 필요합니다</h3>' +
+        '<p class="hint">여행 일정은 게시 열쇠를 아는 사람만 볼 수 있게 해 두었습니다. ' +
+        '[쓰레드] 탭에서 열쇠를 넣으시면 여기 목록이 나옵니다.</p>' +
+        '<div class="row"><button class="btn primary" data-tab="thr">쓰레드 탭으로</button>' +
+        '<button class="btn" id="tRetry">다시 시도</button></div></div>');
+    }
+    return view(head + '<div class="panel" style="border-color:var(--bad)"><h3>여행 일정을 못 받아 왔습니다</h3>' +
+      '<p class="hint">' + esc(TLOADWHY) + '</p>' +
+      '<p class="hint">받아 오기 전에는 아무것도 내보내지 않습니다 — 원래 있던 일정을 빈 목록으로 덮어쓰지 않기 위해서입니다.</p>' +
+      '<div class="row"><button class="btn primary" id="tRetry">다시 시도</button></div></div>');
+  }
+
   if (TSEL) return vTourEdit();
 
   view(
     '<h2 class="sec">여행사</h2><p class="sub">유포리아투어 쓰레드 계정입니다. 쇼핑몰과 완전히 나뉘어 있어 서로 섞이지 않습니다.</p>' +
+
+    '<div class="note">여행 상품은 <b>쇼핑몰 사이트에 올라가지 않습니다.</b> ' +
+      '손님 화면에도 안 나오고, 주소를 아는 사람도 열어 볼 수 없는 서버 안쪽' +
+      '(<span class="mono">netlify/functions/tours-data.js</span>)에만 둡니다. ' +
+      '쓰레드에 글을 올릴 때만 서버가 꺼내 씁니다.</div>' +
 
     '<div class="cards">' +
       kpi('상태', TT.on === false ? '꺼짐' : '켜짐',
@@ -1613,8 +1677,9 @@ function vTour() {
     '</div>' +
 
     '<div class="panel"><h3>여행 상품 <span class="pill ok">' + list.length + '개</span></h3>' +
-      '<p class="hint">여기 넣은 일정을 돌아가며 올립니다. 사진은 <span class="mono">assets/img/tours/</span> 에 올리고 ' +
-      '파일 이름을 적으시거나, 다른 사이트의 사진 주소를 그대로 적으셔도 됩니다.</p>' +
+      '<p class="hint">여기 넣은 일정을 돌아가며 올립니다. 지금은 <b>글만</b> 올라갑니다 — ' +
+      '여행 사진은 쇼핑몰에 올리지 않기로 했기 때문입니다. ' +
+      '회사 홈페이지 같은 여행사 쪽에 사진을 올려 두셨다면 그 <b>전체 주소</b>(https:// 로 시작)를 적어 주세요.</p>' +
       (list.length
         ? '<div class="tblwrap" style="box-shadow:none"><table style="min-width:0"><thead><tr>' +
           '<th>일정</th><th style="width:120px">지역</th><th style="width:90px">기간</th><th style="width:120px">요금</th>' +
@@ -1624,7 +1689,7 @@ function vTour() {
               '<td class="pmeta">' + esc(pt2(t.area)) + '</td>' +
               '<td class="pmeta">' + esc(pt2(t.days)) + '</td>' +
               '<td class="pmeta">' + esc(pt2(t.price)) + '</td>' +
-              '<td>' + (t.img ? '<span class="pill ok">있음</span>' : '<span class="pill warn">없음</span>') + '</td>' +
+              '<td>' + (t.img ? '<span class="pill ok">있음</span>' : '<span class="pmeta">글만</span>') + '</td>' +
               '<td>' + (t.on === false ? '<span class="pill warn">꺼짐</span>' : '<span class="pill ok">켬</span>') + '</td>' +
               '<td><div class="row" style="gap:4px;flex-wrap:nowrap">' +
                 '<button class="btn sm" data-tedit="' + esc(t.id) + '">편집</button>' +
@@ -1659,7 +1724,9 @@ function vTour() {
 
     '<div class="note">여행사 계정은 쇼핑몰과 <b>토큰도 요일도 따로</b>입니다. ' +
       '넷리파이에 THREADS_TOUR_USER_ID · THREADS_TOUR_TOKEN 두 개를 더 넣으셔야 돌아갑니다. ' +
-      '게시 열쇠(THREADS_HOOK_KEY)는 두 계정이 같이 씁니다.</div>'
+      '게시 열쇠(THREADS_HOOK_KEY)는 두 계정이 같이 씁니다.<br><br>' +
+      '여기서 고친 것은 <b>' + TOURPATH + '</b> 한 파일로만 올라갑니다. ' +
+      'assets 폴더에는 여행 관련 파일이 하나도 올라가지 않습니다.</div>'
   );
 }
 
@@ -1717,8 +1784,12 @@ function vTourEdit() {
       '<textarea data-te="tag:ko" rows="2" placeholder="세비야·그라나다·론다를 한 번에">' + esc((t.tag && t.tag.ko) || '') + '</textarea></label>' +
     '<label class="fld"><span>한 줄 소개 · English</span>' +
       '<textarea data-te="tag:en" rows="2">' + esc((t.tag && t.tag.en) || '') + '</textarea></label>' +
-    '<label class="fld"><span>사진</span><input id="t_img" value="' + esc(t.img || '') + '" placeholder="assets/img/tours/andalucia.jpg">' +
-      '<span class="hint" style="margin:4px 0 0">사진이 있는 글이 훨씬 잘 읽힙니다. 비워 두면 글만 올라갑니다.</span></label>' +
+    '<label class="fld"><span>사진 주소 (안 넣으셔도 됩니다)</span>' +
+      '<input id="t_img" value="' + esc(t.img || '') + '" placeholder="https://www.toureplus.kr/img/andalucia.jpg">' +
+      '<span class="hint" style="margin:4px 0 0">비워 두면 <b>글만</b> 올라갑니다. 지금 설정이 그렇습니다.<br>' +
+      '넣으실 때는 <b>https:// 로 시작하는 전체 주소</b>여야 하고, 여행사 쪽(회사 홈페이지 등)에 올린 사진이어야 합니다. ' +
+      '쇼핑몰 안 경로를 적으시면 무시하고 글만 올립니다 — 여행 사진은 쇼핑몰에 올리지 않습니다.<br>' +
+      '<b style="color:var(--bad)">남의 사진은 허락 없이 쓰시면 안 됩니다.</b></span></label>' +
     '<label class="fld"><span>이 일정 올리기</span><select id="t_on">' +
       '<option value="1"' + (t.on !== false ? ' selected' : '') + '>켬</option>' +
       '<option value="0"' + (t.on === false ? ' selected' : '') + '>끔 — 목록에 두되 올리지 않음</option></select></label>' +
@@ -2041,6 +2112,8 @@ function render() {
   if (MISS === null && (TAB === 'media' || TAB === 'deploy' || TAB === 'home')) {
     checkFiles(function () { if (TAB === 'media' || TAB === 'deploy' || TAB === 'home') render(); });
   }
+  /* 여행 일정은 이 페이지에 딸려 오지 않습니다 — 탭을 열 때 서버에서 받아 옵니다 */
+  if (TAB === 'tour' || TAB === 'deploy') tourLoad();
   window.scrollTo(0, 0);
 }
 function go(tab) { TAB = tab; try { history.replaceState(null, '', '#' + tab); } catch (e) {} render(); }
@@ -2095,6 +2168,7 @@ document.addEventListener('click', function (e) {
   if (e.target.id === 'fxFetch') { fetchRate(); return; }
 
   /* ----- 여행사 ----- */
+  if (e.target.id === 'tRetry') { TLOAD = 'idle'; tourLoad(true); return; }
   if (e.target.id === 'tNew') { TSEL = 'new'; render(); return; }
   var teb = e.target.closest('[data-tedit]');
   if (teb) { TSEL = teb.dataset.tedit; render(); return; }
@@ -2117,6 +2191,10 @@ document.addEventListener('click', function (e) {
       o[k[0]][k[1]] = el.value.trim();
     });
     if (!o.name.ko && !o.name.en) return toast('일정 이름을 넣어 주세요');
+    if (o.img && !/^https:\/\//i.test(o.img))
+      return toast('사진은 https:// 로 시작하는 전체 주소만 됩니다 — 비워 두시면 글만 올라갑니다');
+    if (o.img && o.img.indexOf(SITE) === 0)
+      return toast('여행 사진은 쇼핑몰에 올리지 않습니다 — 여행사 쪽 주소를 적어 주세요');
     var list = toursEdit();
     if (isNew) list.push(o);
     else for (var j = 0; j < list.length; j++) if (String(list[j].id) === String(id)) list[j] = o;
@@ -2785,7 +2863,7 @@ function gatherFiles() {
   /* 안내 문구·결제 수단·택배사를 고쳤으면 그 파일도 같이 올립니다. */
   if (infoDirty()) files.push({ path: 'assets/policy.js', b64: b64(buildPolicyJs()) });
   /* 여행사 일정·설정을 고쳤으면 그 파일도 */
-  if (toursDirty()) files.push({ path: 'assets/tours.js', b64: b64(buildToursJs()) });
+  if (toursDirty()) files.push({ path: TOURPATH, b64: b64(buildToursJs()) });
   var want = (MISS || []).slice();
   if (!want.length) return Promise.resolve(files);
   return want.reduce(function (chain, p) {
@@ -3057,7 +3135,7 @@ function exportData() {
     setTimeout(fn, d);
   }
   if (infoDirty()) later(function () { drop(buildPolicyJs(), 'policy.js'); }, 'policy.js');
-  if (toursDirty()) later(function () { drop(buildToursJs(), 'tours.js'); }, 'tours.js');
+  if (toursDirty()) later(function () { drop(buildToursJs(), 'tours-data.js'); }, 'tours-data.js (netlify/functions 폴더로)');
   if (extra.length) {
     toast('data.js · ' + extra.join(' · ') + ' 를 내보냈습니다 — assets 폴더에 모두 덮어써 주세요');
     return;

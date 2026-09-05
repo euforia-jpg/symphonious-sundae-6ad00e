@@ -21,6 +21,11 @@
 
    토큰은 넷리파이 안에만 있고, 손님 화면이나 대쉬보드로는 절대 내려가지 않습니다.  */
 
+/* 여행 일정은 이 폴더 안의 파일에서 바로 읽습니다.
+   assets 폴더가 아니라 여기 두는 이유는, 이 폴더의 파일은 서버 안에서만 돌고
+   손님에게 파일로 내려가지 않기 때문입니다. 여행 상품은 쇼핑몰에 올리지 않습니다. */
+import { TOURS, TOURTHREADS } from './tours-data.js';
+
 /* 쓰레드 주소. 시험할 때만 THREADS_API 로 다른 곳을 보게 할 수 있습니다. */
 const API = process.env.THREADS_API || 'https://graph.threads.net/v1.0';
 
@@ -177,11 +182,10 @@ function fillTour(tpl, t, tags, lang, kakao) {
 
 /* 여행사 채널이 오늘 무엇을 올릴지 */
 async function planTour(when) {
-  const W = await readJs('/assets/tours.js');
-  const T = W.TOURTHREADS || {};
+  const T = TOURTHREADS || {};
   if (T.on === false) return { ok: false, why: '대쉬보드에서 꺼 두었습니다' };
 
-  const list = (W.TOURS || []).filter(t => t.on !== false && (t.name && (t.name.ko || t.name.en || typeof t.name === 'string')));
+  const list = (TOURS || []).filter(t => t.on !== false && (t.name && (t.name.ko || t.name.en || typeof t.name === 'string')));
   if (!list.length) return { ok: false, why: '올릴 여행 상품이 없습니다 — 대쉬보드 [여행사] 탭에서 넣어 주세요' };
 
   const n = postIndex(T.days && T.days.length ? T.days : [2, 4], when);
@@ -199,7 +203,11 @@ async function planTour(when) {
 
   const t = pooled[n % pooled.length];
   const tpl = tpls[(n * 3) % tpls.length];
-  const img = t.img ? (/^https?:/i.test(t.img) ? t.img : site() + '/' + String(t.img).replace(/^\/+/, '')) : '';
+
+  /* 여행 사진은 쇼핑몰에 올리지 않기로 했습니다.
+     그래서 전체 주소(https://…)로 적힌 것만 씁니다. 쇼핑몰 안 경로는 무시합니다. */
+  const raw = String(t.img || '').trim();
+  const img = (/^https:\/\//i.test(raw) && raw.indexOf(site()) !== 0) ? raw : '';
 
   return {
     ok: true, ch: 'tour',
@@ -302,6 +310,15 @@ export default async (req) => {
   const plan = () => (ch === 'tour' ? planTour() : planToday());
 
   try {
+    /* 대쉬보드가 여행 일정을 읽어 가는 창구.
+       여행 상품은 손님에게 안 보이기로 했으므로 게시 열쇠를 아는 사람만 볼 수 있습니다. */
+    if (q.get('data')) {
+      if (ch !== 'tour') return json({ ok: false, why: '여행사 쪽에서만 쓰는 창구입니다' }, 400);
+      if (key.length < 12) return json({ ok: false, why: 'THREADS_HOOK_KEY 를 12자 이상으로 정해 주세요' }, 403);
+      if (q.get('key') !== key) return json({ ok: false, why: '열쇠가 다릅니다' }, 403);
+      return json({ ok: true, TOURS: TOURS, TOURTHREADS: TOURTHREADS });
+    }
+
     if (q.get('preview')) return json(await plan());
 
     if (q.get('post')) {
