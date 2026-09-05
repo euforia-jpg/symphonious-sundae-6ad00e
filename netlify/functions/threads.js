@@ -1,20 +1,28 @@
 /* 쓰레드(Threads) 자동 게시 창구
 
-   주소 세 가지
-     /api/threads                 지금 상태 (설정이 제대로 붙었는지 확인)
-     /api/threads?preview=1       오늘 나갈 글을 보여만 줍니다. 올리지 않습니다.
-     /api/threads?post=1&key=…    지금 올립니다. key 는 THREADS_HOOK_KEY 와 같아야 합니다.
+   계정이 둘입니다. ?ch= 로 나눕니다.
+     ch=shop (기본)  쇼핑몰 상품   — data.js + policy.js 의 window.THREADS
+     ch=tour         여행사 일정   — tours.js 의 window.TOURS + window.TOURTHREADS
 
-   정해진 요일·시각에 올리는 일은 threads-cron.js 가 이 주소를 부르는 방식으로 합니다.
+   주소
+     /api/threads?ch=tour                 지금 상태
+     /api/threads?ch=tour&preview=1       오늘 나갈 글을 보여만 줍니다. 올리지 않습니다.
+     /api/threads?ch=tour&post=1&key=…    지금 올립니다.
+
+   정해진 요일·시각에 올리는 일은 threads-cron.js(상품) 와
+   threads-tour-cron.js(여행사) 가 이 주소를 부르는 방식으로 합니다.
 
    넷리파이 환경변수 (Site configuration → Environment variables)
-     THREADS_USER_ID    쓰레드 사용자 번호
-     THREADS_TOKEN      장기 토큰 (60일마다 갱신해야 합니다)
-     THREADS_HOOK_KEY   아무도 못 맞출 긴 문자열. 이게 없으면 게시를 막습니다.
+     THREADS_USER_ID        쇼핑몰 쓰레드 사용자 번호
+     THREADS_TOKEN          쇼핑몰 장기 토큰 (60일마다 갱신)
+     THREADS_TOUR_USER_ID   여행사 쓰레드 사용자 번호
+     THREADS_TOUR_TOKEN     여행사 장기 토큰 (60일마다 갱신)
+     THREADS_HOOK_KEY       아무도 못 맞출 긴 문자열. 두 계정이 같이 씁니다.
 
    토큰은 넷리파이 안에만 있고, 손님 화면이나 대쉬보드로는 절대 내려가지 않습니다.  */
 
-const API = 'https://graph.threads.net/v1.0';
+/* 쓰레드 주소. 시험할 때만 THREADS_API 로 다른 곳을 보게 할 수 있습니다. */
+const API = process.env.THREADS_API || 'https://graph.threads.net/v1.0';
 
 function site() {
   return (process.env.URL || 'https://symphonious-sundae-6ad00e.netlify.app').replace(/\/+$/, '');
@@ -61,6 +69,13 @@ function postIndex(days, d) {
   return n - 1 < 0 ? 0 : n - 1;                            // 오늘 것이 마지막
 }
 
+/* 채널마다 다른 것: 어디서 토큰을 읽고, 무엇을 재료로 쓰는가 */
+const CH = {
+  shop: { uid: 'THREADS_USER_ID',      tok: 'THREADS_TOKEN',      label: '쇼핑몰' },
+  tour: { uid: 'THREADS_TOUR_USER_ID', tok: 'THREADS_TOUR_TOKEN', label: '여행사' }
+};
+function chan(q) { return q === 'tour' ? 'tour' : 'shop'; }
+
 /* 올릴 수 있는 상품만 고릅니다 — 숨김·품절·값 없음·사진 없음은 뺍니다 */
 function pool(P, hall) {
   return P.filter(p =>
@@ -104,6 +119,96 @@ function photo(p) {
   const first = (p.imgs && p.imgs.length) ? p.imgs[0] : p.img;
   if (!first) return '';
   return /^https?:/i.test(first) ? first : site() + '/' + String(first).replace(/^\/+/, '');
+}
+
+const HANGUL = /[가-힣ㄱ-ㅎㅏ-ㅣ]/;
+
+/* 한 칸에서 이 언어로 쓸 글자를 고릅니다.
+
+   빈 칸을 다른 언어로 메우면 영어 글에 한글이 섞여 나옵니다 — 그건 안 합니다.
+   다만 Andalucía · Porto 처럼 한글이 없는 말은 어느 언어에서나 같으니 빌려 씁니다. */
+function tpick(o, L) {
+  if (typeof o === 'string') return o.trim();
+  if (!o) return '';
+  const mine = String(o[L] || '').trim();
+  if (mine) return mine;
+  if (L === 'ko') return '';                       // 한국어 글에는 한국어 칸만
+  const ko = String(o.ko || '').trim();
+  return HANGUL.test(ko) ? '' : ko;
+}
+
+/* 여행 일정 글 채우기.
+
+   빈 칸이 생기면 그 자리만 지우는 게 아니라, 그 칸을 안고 있던 조각째 지웁니다.
+   그래야 "출발" 만 덩그러니 남거나 " · " 가 떠 있는 글이 안 나갑니다. */
+function fillTour(tpl, t, tags, lang, kakao) {
+  const L = lang || 'ko';
+  const v = {
+    name: tpick(t.name, L), tag: tpick(t.tag, L), area: tpick(t.area, L),
+    days: tpick(t.days, L), price: tpick(t.price, L), from: tpick(t.from, L),
+    link: String(t.link || kakao || '').trim(),
+    tags: (tags || []).join(' ')
+  };
+  /* 한 조각을 채우고, 그 조각이 살아남을 만한지 알려 줍니다 */
+  function chunk(text) {
+    let had = false, filled = false;
+    const out = text.replace(/\{(\w+)\}/g, (m, k) => {
+      if (!(k in v)) return m;
+      had = true;
+      if (v[k]) { filled = true; return v[k]; }
+      return '';
+    });
+    return { out: out, dead: had && !filled };
+  }
+  const lines = String(tpl).split('\n').map((line) => {
+    const parts = line.split('·').map(chunk).filter((c) => !c.dead);
+    if (!parts.length) return null;                              // 자리표가 다 비었으면 줄째 지웁니다
+    return parts.map((c) => c.out.trim()).filter(Boolean).join(' · ');
+  }).filter((x) => x !== null);
+
+  let s = lines.join('\n')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/^[ ·|—-]+|[ ·|—-]+$/gm, '')
+    .trim();
+  if (s.length > 500) s = s.slice(0, 497).trim() + '…';
+  return s;
+}
+
+/* 여행사 채널이 오늘 무엇을 올릴지 */
+async function planTour(when) {
+  const W = await readJs('/assets/tours.js');
+  const T = W.TOURTHREADS || {};
+  if (T.on === false) return { ok: false, why: '대쉬보드에서 꺼 두었습니다' };
+
+  const list = (W.TOURS || []).filter(t => t.on !== false && (t.name && (t.name.ko || t.name.en || typeof t.name === 'string')));
+  if (!list.length) return { ok: false, why: '올릴 여행 상품이 없습니다 — 대쉬보드 [여행사] 탭에서 넣어 주세요' };
+
+  const n = postIndex(T.days && T.days.length ? T.days : [2, 4], when);
+  const langs = (T.langs && T.langs.length) ? T.langs : ['ko'];
+  const lang = langs[n % langs.length];
+  const tpls = (T.postsBy && T.postsBy[lang] && T.postsBy[lang].length) ? T.postsBy[lang] : ['{name}\n{tag}\n{price}\n{link}'];
+  const tags = (T.tagsBy && T.tagsBy[lang]) ? T.tagsBy[lang] : [];
+
+  /* 오늘 쓸 언어로 이름이 적혀 있는 일정만 후보로 둡니다.
+     영어 이름을 안 적어 둔 일정이 영어 날에 한글 제목으로 나가면 안 됩니다. */
+  const pooled = list.filter((t) => !!tpick(t.name, lang));
+  if (!pooled.length)
+    return { ok: false, why: '오늘은 ' + (lang === 'ko' ? '한국어' : lang.toUpperCase()) +
+      ' 차례인데 그 언어로 이름이 적힌 일정이 없습니다 — 대쉬보드 [여행사] 탭에서 채워 주세요' };
+
+  const t = pooled[n % pooled.length];
+  const tpl = tpls[(n * 3) % tpls.length];
+  const img = t.img ? (/^https?:/i.test(t.img) ? t.img : site() + '/' + String(t.img).replace(/^\/+/, '')) : '';
+
+  return {
+    ok: true, ch: 'tour',
+    date: kstDate(when), weekday: kstDay(when), index: n,
+    productId: t.id || '', product: tpick(t.name, lang) || tpick(t.name, 'ko'),
+    pool: pooled.length, lang: lang, template: (n * 3) % tpls.length,
+    text: fillTour(tpl, t, tags, lang, T.kakao),
+    image: img
+  };
 }
 
 /* 오늘 무엇을 올릴지 정합니다 */
@@ -173,9 +278,10 @@ async function containerReady(id, token) {
   throw new Error('사진 처리가 1분 안에 끝나지 않았습니다');
 }
 
-async function publish(plan) {
-  const uid = process.env.THREADS_USER_ID, token = process.env.THREADS_TOKEN;
-  if (!uid || !token) throw new Error('THREADS_USER_ID / THREADS_TOKEN 이 넷리파이에 없습니다');
+async function publish(plan, ch) {
+  const cfg = CH[ch] || CH.shop;
+  const uid = process.env[cfg.uid], token = process.env[cfg.tok];
+  if (!uid || !token) throw new Error(cfg.uid + ' / ' + cfg.tok + ' 이 넷리파이에 없습니다');
 
   const params = { access_token: token, text: plan.text };
   if (plan.image) { params.media_type = 'IMAGE'; params.image_url = plan.image; }
@@ -191,32 +297,36 @@ async function publish(plan) {
 export default async (req) => {
   const q = new URL(req.url).searchParams;
   const key = process.env.THREADS_HOOK_KEY || '';
+  const ch = chan(q.get('ch'));
+  const c = CH[ch];
+  const plan = () => (ch === 'tour' ? planTour() : planToday());
 
   try {
-    if (q.get('preview')) return json(await planToday());
+    if (q.get('preview')) return json(await plan());
 
     if (q.get('post')) {
       /* 열쇠를 안 정해 두었으면 아무도 못 올리게 막습니다 — 빈 값끼리 맞아떨어지면 안 됩니다 */
       if (key.length < 12) return json({ ok: false, why: 'THREADS_HOOK_KEY 를 12자 이상으로 정해 주세요' }, 403);
       if (q.get('key') !== key) return json({ ok: false, why: '열쇠가 다릅니다' }, 403);
 
-      const plan = await planToday();
-      if (!plan.ok) return json(plan);
-      const id = await publish(plan);
-      console.log('[threads] 올렸습니다', id, plan.productId, plan.date);
-      return json({ ok: true, posted: id, date: plan.date, productId: plan.productId, text: plan.text });
+      const p = await plan();
+      if (!p.ok) return json(p);
+      const id = await publish(p, ch);
+      console.log('[threads:' + ch + '] 올렸습니다', id, p.productId, p.date);
+      return json({ ok: true, ch: ch, posted: id, date: p.date, productId: p.productId, text: p.text });
     }
 
     /* 아무 것도 안 붙였을 때 — 준비 상태만 알려 줍니다 (비밀은 보여 주지 않습니다) */
     return json({
       ok: true,
-      사용자번호: process.env.THREADS_USER_ID ? '있음' : '없음',
-      토큰: process.env.THREADS_TOKEN ? '있음' : '없음',
+      계정: c.label,
+      사용자번호: process.env[c.uid] ? '있음' : '없음',
+      토큰: process.env[c.tok] ? '있음' : '없음',
       열쇠: key.length >= 12 ? '있음' : '없음(또는 너무 짧음)',
       오늘: kstDate(), 요일: kstDay()
     });
   } catch (e) {
-    console.error('[threads]', e);
+    console.error('[threads:' + ch + ']', e);
     return json({ ok: false, why: String((e && e.message) || e) }, 200);
   }
 };
